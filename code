@@ -1,4 +1,3 @@
--- Services
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
@@ -15,7 +14,7 @@ local aimKeyName = "LeftClick"
 -- Bhop Variables
 local BHOP_JUMP_POWER = 55
 local BHOP_AIR_CONTROL = 0.6
-local BHOP_MAX_SPEED = 100
+local BHOP_MAX_SPEED = 100 -- Increased to allow higher speeds
 local JUMP_COOLDOWN = 0.1
 local isBhopping = false
 local lastJumpTime = 0
@@ -86,7 +85,8 @@ local Toggles = {
     AntiAFK = false,
     ESPChams = false,
     SuperJump = false,
-    EnemyTP_KILL = false,
+    EnemyLineTP = false,
+    EnemyTP2_0 = false,
     ShowFOV = false,
     Jerk = false,
     BHOP = false
@@ -124,7 +124,8 @@ local function ApplySavedToggles()
     if Toggles.AntiAFK then ToggleAntiAFK(true) end
     if Toggles.ESPChams then ToggleESPChams(true) end
     if Toggles.SuperJump then ToggleSuperJump(true) end
-    if Toggles.EnemyTP_KILL then ToggleEnemyTP_KILL(true) end
+    if Toggles.EnemyLineTP then ToggleEnemyLineTP(true) end
+    if Toggles.EnemyTP2_0 then ToggleEnemyTP2_0(true) end
     if Toggles.ShowFOV then ToggleShowFOV(true) end
     if Toggles.Jerk then ToggleJerk(true) end
     if Toggles.BHOP then ToggleBHOP(true) end
@@ -160,9 +161,6 @@ print("ScreenGui created:", ScreenGui.Name)
 
 local Connections = {}
 local JerkInstance = nil
-local initialPositions = {}
-local characterAddedConnections = {}
-
 local function CleanupAll()
     SaveSettings()
     RunService:UnbindFromRenderStep("Aimbot")
@@ -175,7 +173,8 @@ local function CleanupAll()
     RunService:UnbindFromRenderStep("SuperJump")
     RunService:UnbindFromRenderStep("GodMode")
     RunService:UnbindFromRenderStep("AntiAFK")
-    RunService:UnbindFromRenderStep("EnemyTP_KILL")
+    RunService:UnbindFromRenderStep("EnemyLineTP")
+    RunService:UnbindFromRenderStep("EnemyTP2_0")
     RunService:UnbindFromRenderStep("FOVFlash")
     RunService:UnbindFromRenderStep("BHOP")
     for player, _ in pairs(ESP) do
@@ -184,11 +183,7 @@ local function CleanupAll()
     for _, conn in pairs(Connections) do
         pcall(function() conn:Disconnect() end)
     end
-    for _, conn in pairs(characterAddedConnections) do
-        pcall(function() conn:Disconnect() end)
-    end
     Connections = {}
-    characterAddedConnections = {}
     if FOVCircle then
         FOVCircle:Remove()
         FOVCircle = nil
@@ -227,7 +222,6 @@ local function CleanupAll()
         end
     end
     JerkInstance = nil
-    initialPositions = {}
     ScreenGui:Destroy()
     print("Cheat fully closed and resources cleaned up")
 end
@@ -796,7 +790,7 @@ local function ToggleBHOP(state)
                     local moveDirection = humanoid.MoveDirection
                     if moveDirection.Magnitude > 0 then
                         local velocity = rootPart.Velocity
-                        local speedBoost = moveDirection * Settings.BHOPSpeed
+                        local speedBoost = moveDirection * Settings.BHOPSpeed -- Direct scaling for stronger effect
                         local newVelocity = Vector3.new(
                             math.clamp(velocity.X + speedBoost.X, -BHOP_MAX_SPEED, BHOP_MAX_SPEED),
                             velocity.Y,
@@ -810,7 +804,7 @@ local function ToggleBHOP(state)
                     local moveDirection = humanoid.MoveDirection
                     if moveDirection.Magnitude > 0 then
                         local currentVelocity = rootPart.Velocity
-                        local airAdjust = moveDirection * (Settings.BHOPSpeed / 25) * BHOP_AIR_CONTROL * deltaTime * 100
+                        local airAdjust = moveDirection * (Settings.BHOPSpeed / 25) * BHOP_AIR_CONTROL * deltaTime * 100 -- Amplify air control
                         rootPart.Velocity = Vector3.new(
                             math.clamp(currentVelocity.X + airAdjust.X, -BHOP_MAX_SPEED, BHOP_MAX_SPEED),
                             currentVelocity.Y,
@@ -953,82 +947,77 @@ local function ToggleShowFOV(state)
     print("ShowFOV set to", state)
 end
 
--- EnemyTP-KILL
+-- Enemy Line TP
+local function ToggleEnemyLineTP(state)
+    if state then
+        RunService:BindToRenderStep("EnemyLineTP", Enum.RenderPriority.Character.Value + 1, function()
+            pcall(function()
+                if not Toggles.EnemyLineTP then return end
+                local myChar = LocalPlayer.Character
+                if not myChar or not myChar:FindFirstChild("HumanoidRootPart") or not myChar:FindFirstChild("Humanoid") or myChar.Humanoid.Health <= 0 then
+                    return
+                end
+                local myRoot = myChar.HumanoidRootPart
+                local myCFrame = myRoot.CFrame
+                local lookVector = myCFrame.LookVector * Vector3.new(1, 0, 1)
+                local offset = 1
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.Humanoid.Health > 0 then
+                        local isEnemy = not Toggles.TeamCheck or not hasTeams() or player.Team ~= LocalPlayer.Team
+                        if isEnemy then
+                            local root = player.Character.HumanoidRootPart
+                            local targetPos = myCFrame.Position + (lookVector * (5 + offset * 5))
+                            targetPos = Vector3.new(targetPos.X, myCFrame.Position.Y, targetPos.Z)
+                            root.CFrame = CFrame.new(targetPos, targetPos + lookVector)
+                            root.Anchored = true
+                            player.Character.Humanoid.WalkSpeed = 0
+                            player.Character.Humanoid.JumpPower = 0
+                            offset = offset + 1
+                        end
+                    end
+                end
+            end)
+            task.wait(1.5)
+        end)
+    else
+        RunService:UnbindFromRenderStep("EnemyLineTP")
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local root = player.Character.HumanoidRootPart
+                root.Anchored = false
+                if player.Character:FindFirstChild("Humanoid") then
+                    player.Character.Humanoid.WalkSpeed = 16
+                    player.Character.Humanoid.JumpPower = 50
+                end
+            end
+        end
+    end
+    SaveSettings()
+end
+
+-- EnemyTP2.0
 local function isValidCharacter(player)
     return player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0
 end
 
-local function getRandomSpreadPosition(localHumanoidRootPart)
-    local forwardVector = localHumanoidRootPart.CFrame.LookVector
-    local basePosition = localHumanoidRootPart.Position + (forwardVector * 10)
-    local positions = {}
-    for i, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            local offsetX = math.random(-5, 5)
-            local offsetZ = math.random(-5, 5)
-            positions[player.Name] = basePosition + Vector3.new(offsetX, 0, offsetZ)
-        end
+local function teleportAndFreeze()
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        return
     end
-    return positions
-end
-
-local function teleportPlayerInFront(player, localPlayer, position)
-    if player.Character and localPlayer.Character and player ~= localPlayer then
-        local localHumanoidRootPart = localPlayer.Character:FindFirstChild("HumanoidRootPart")
-        local targetHumanoidRootPart = player.Character:FindFirstChild("HumanoidRootPart")
-        local targetHumanoid = player.Character:FindFirstChild("Humanoid")
-        
-        if localHumanoidRootPart and targetHumanoidRootPart and targetHumanoid then
-            local isEnemy = not Toggles.TeamCheck or not hasTeams() or player.Team ~= localPlayer.Team
+    local myCFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
+    local forwardOffset = myCFrame.LookVector * 5
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and isValidCharacter(player) then
+            local isEnemy = not Toggles.TeamCheck or not hasTeams() or player.Team ~= LocalPlayer.Team
             if isEnemy then
-                targetHumanoidRootPart.CFrame = CFrame.new(position)
-                targetHumanoid.WalkSpeed = 0
-                targetHumanoid.JumpPower = 0
+                pcall(function()
+                    player.Character.HumanoidRootPart.CFrame = CFrame.new(myCFrame.Position + forwardOffset + Vector3.new(math.random(-2, 2), 0, math.random(-1, 1)))
+                    player.Character.Humanoid.WalkSpeed = 0
+                    player.Character.Humanoid.JumpPower = 0
+                end)
             end
         end
     end
-end
-
-local function onCharacterAdded(player, localPlayer)
-    if not Toggles.EnemyTP_KILL then return end
-    if initialPositions[player.Name] then
-        task.wait(0.1) -- Brief delay to ensure character is fully loaded
-        teleportPlayerInFront(player, localPlayer, initialPositions[player.Name])
-    end
-end
-
-local function teleportAllPlayers(localPlayer)
-    if not Toggles.EnemyTP_KILL then return end
-    local localHumanoidRootPart = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not localHumanoidRootPart then return end
-
-    if not next(initialPositions) then
-        initialPositions = getRandomSpreadPosition(localHumanoidRootPart)
-    end
-
-    RunService:BindToRenderStep("EnemyTP_KILL", Enum.RenderPriority.Character.Value + 1, function()
-        pcall(function()
-            if not Toggles.EnemyTP_KILL then return end
-            for _, player in pairs(Players:GetPlayers()) do
-                if player ~= localPlayer and initialPositions[player.Name] then
-                    if isValidCharacter(player) then
-                        teleportPlayerInFront(player, localPlayer, initialPositions[player.Name])
-                    end
-                end
-            end
-        end)
-    end)
-end
-
-local function setupCharacterAddedListener(player, localPlayer)
-    if characterAddedConnections[player] then
-        characterAddedConnections[player]:Disconnect()
-    end
-    local charAddedConn = player.CharacterAdded:Connect(function()
-        onCharacterAdded(player, localPlayer)
-    end)
-    characterAddedConnections[player] = charAddedConn
-    table.insert(Connections, charAddedConn)
 end
 
 local function unfreezePlayers()
@@ -1040,34 +1029,13 @@ local function unfreezePlayers()
             end)
         end
     end
-    initialPositions = {}
-    RunService:UnbindFromRenderStep("EnemyTP_KILL")
-    for _, conn in pairs(characterAddedConnections) do
-        pcall(function() conn:Disconnect() end)
-    end
-    characterAddedConnections = {}
 end
 
-local function ToggleEnemyTP_KILL(state)
-    Toggles.EnemyTP_KILL = state
+local function ToggleEnemyTP2_0(state)
     if state then
-        local localPlayer = LocalPlayer
-        if localPlayer then
-            initialPositions = {} -- Reset positions when toggling on
-            teleportAllPlayers(localPlayer)
-            for _, player in pairs(Players:GetPlayers()) do
-                if player ~= localPlayer then
-                    setupCharacterAddedListener(player, localPlayer)
-                end
-            end
-            local playerAddedConn = Players.PlayerAdded:Connect(function(player)
-                if player ~= localPlayer then
-                    setupCharacterAddedListener(player, localPlayer)
-                end
-            end)
-            table.insert(Connections, playerAddedConn)
-        end
+        RunService:BindToRenderStep("EnemyTP2_0", Enum.RenderPriority.Character.Value + 1, teleportAndFreeze)
     else
+        RunService:UnbindFromRenderStep("EnemyTP2_0")
         unfreezePlayers()
     end
     SaveSettings()
@@ -1347,7 +1315,7 @@ local function CreateESP(player)
                             maxPos = Vector3.new(
                                 math.max(maxPos.X, partPos.X),
                                 math.max(maxPos.Y, partPos.Y),
-                                maxPos.Z
+                                math.max(maxPos.Z, partPos.Z)
                             )
                         end
                     end
@@ -1595,7 +1563,8 @@ CreateToggle(MiscPage, "SpinBot", ToggleSpinBot)
 CreateToggle(MiscPage, "Invisible", ToggleInvisible)
 CreateToggle(MiscPage, "GodMode", ToggleGodMode)
 CreateToggle(MiscPage, "AntiAFK", ToggleAntiAFK)
-CreateToggle(MiscPage, "EnemyTP-KILL", ToggleEnemyTP_KILL)
+CreateToggle(MiscPage, "EnemyLineTP", ToggleEnemyLineTP)
+CreateToggle(MiscPage, "EnemyTP2_0", ToggleEnemyTP2_0)
 CreateToggle(MiscPage, "Jerk", ToggleJerk)
 CreateSlider(MiscPage, "SpinBotSpeed", 10, 360, Settings.SpinBotSpeed, function(value)
     Settings.SpinBotSpeed = value
