@@ -1,88 +1,413 @@
--- // Unleashed Aimbot Button Beast Mode with FOV Circle
+-- // Unleashed Aimbot Beast Mode with FOV Circle, Neat Tabbed Gray Menu (Visible by Default), and Sidebar Profile
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local StarterGui = game:GetService("StarterGui")
+local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
 -- // Aimbot Settings
 local Aimbot = {
     Enabled = false,
-    FOV = 184.7, -- Pixel-based for GUI circle and ironclad center-based targeting
-    Range = 340.3, -- Stud-based range, adjustable via GUI (50-1000)
-    Smoothness = 1.0, -- Adjusted range: 1 to 3 for snappy control (higher = smoother to prevent flicking)
-    Keybind = Enum.KeyCode.Q, -- Toggle key
-    TargetPart = "Head", -- Target hitbox
-    MaxMouseDelta = 20, -- Tightened to reduce overshoot
-    MaxTargetVelocity = 80, -- Slightly reduced to skip more erratic targets
-    CurrentTarget = nil, -- Persistent target to avoid switching flicks
-    LastTargetSwitch = 0, -- Time since last switch to add hysteresis
-    TargetStickTime = 0.4 -- Increased to lock target longer and prevent flicking
+    WallCheckEnabled = false, -- Default to no wall check
+    FOV = 200.0,
+    Range = 340.0,
+    Smoothness = 1.0,
+    TargetPart = "Head",
+    MaxMouseDelta = 20,
+    MaxTargetVelocity = 80,
+    CurrentTarget = nil,
+    LastTargetSwitch = 0,
+    TargetStickTime = 0.4
+}
+
+-- // Movement Settings
+local Movement = {
+    Forward = false,
+    Backward = false,
+    Left = false,
+    Right = false,
+    Jump = false,
+    MoveSpeed = 16 -- Matches default Roblox walk speed
+}
+
+-- // GUI Settings
+local Menu = {
+    Visible = true -- Visible by default
 }
 
 -- // GUI Setup
 local function CreateGUI()
-    local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "AimbotMenu"
-    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-    ScreenGui.ResetOnSpawn = false
+    -- // Separate ScreenGui for FOV Circle
+    local FOVScreenGui = Instance.new("ScreenGui")
+    FOVScreenGui.Name = "FOVGui"
+    FOVScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    FOVScreenGui.ResetOnSpawn = false
+    FOVScreenGui.Enabled = true
 
-    -- // Main Frame
-    local Frame = Instance.new("Frame")
-    Frame.Size = UDim2.new(0, 200, 0, 100)
-    Frame.Position = UDim2.new(0, 10, 0, 10)
-    Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    Frame.BorderSizePixel = 0
-    Frame.Parent = ScreenGui
-    local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 8)
-    UICorner.Parent = Frame
-
-    -- // Toggle Button
-    local ToggleButton = Instance.new("TextButton")
-    ToggleButton.Size = UDim2.new(0.9, 0, 0, 40)
-    ToggleButton.Position = UDim2.new(0.05, 0, 0.3, 0)
-    ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    ToggleButton.Text = "Aimbot: OFF"
-    ToggleButton.TextColor3 = Color3.fromRGB(255, 0, 0)
-    ToggleButton.TextScaled = true
-    ToggleButton.Font = Enum.Font.SourceSans
-    ToggleButton.Parent = Frame
-    local ToggleUICorner = Instance.new("UICorner")
-    ToggleUICorner.CornerRadius = UDim.new(0, 5)
-    ToggleUICorner.Parent = ToggleButton
-
-    -- // FOV Circle (Visual) - Dark Red Edition
+    -- // FOV Circle (Dark Red)
     local FOVCircle = Instance.new("Frame")
     FOVCircle.Name = "FOVCircle"
     FOVCircle.Size = UDim2.new(0, Aimbot.FOV * 2, 0, Aimbot.FOV * 2)
     FOVCircle.Position = UDim2.new(0.5, -Aimbot.FOV, 0.5, -Aimbot.FOV)
-    FOVCircle.BackgroundTransparency = 0.95  -- Almost invisible fill
-    FOVCircle.BackgroundColor3 = Color3.fromRGB(139, 0, 0)  -- Dark red fill
+    FOVCircle.BackgroundTransparency = 0.95
+    FOVCircle.BackgroundColor3 = Color3.fromRGB(139, 0, 0)
     FOVCircle.BorderSizePixel = 0
-    FOVCircle.Visible = false  -- Hidden until enabled
-    FOVCircle.Parent = ScreenGui
+    FOVCircle.Visible = Aimbot.Enabled
+    FOVCircle.Parent = FOVScreenGui
 
     local FOVCircleUIStroke = Instance.new("UIStroke")
-    FOVCircleUIStroke.Thickness = 2
-    FOVCircleUIStroke.Color = Color3.fromRGB(139, 0, 0)  -- Dark red border
+    FOVCircleUIStroke.Thickness = 1
+    FOVCircleUIStroke.Color = Color3.fromRGB(139, 0, 0)
     FOVCircleUIStroke.Parent = FOVCircle
 
     local FOVCircleUICorner = Instance.new("UICorner")
     FOVCircleUICorner.CornerRadius = UDim.new(1, 0)
     FOVCircleUICorner.Parent = FOVCircle
 
-    -- // GUI Interactions
-    ToggleButton.MouseButton1Click:Connect(function()
-        Aimbot.Enabled = not Aimbot.Enabled
-        ToggleButton.Text = "Aimbot: " .. (Aimbot.Enabled and "ON" or "OFF")
-        ToggleButton.TextColor3 = Aimbot.Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-        FOVCircle.Visible = Aimbot.Enabled
+    -- // Main Menu ScreenGui
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "AimbotMenu"
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.Enabled = true -- Visible by default
+
+    -- // Main Frame (Compact, Dark Gray, Tabbed Layout)
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Size = UDim2.new(0, 0, 0, 0)
+    MainFrame.Position = UDim2.new(0.5, -250, 0.5, -150)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Parent = ScreenGui
+    TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 500, 0, 300), BackgroundTransparency = 0}):Play()
+
+    local MainCorner = Instance.new("UICorner")
+    MainCorner.CornerRadius = UDim.new(0, 8)
+    MainCorner.Parent = MainFrame
+
+    -- // Smooth Dragging
+    local isDragging = false
+    local dragStart = nil
+    local startPos = nil
+
+    local function updateDrag(input)
+        local delta = input.Position - dragStart
+        local newPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        TweenService:Create(MainFrame, TweenInfo.new(0.1, Enum.EasingStyle.Linear), {Position = newPos}):Play()
+    end
+
+    UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 and Menu.Visible then
+            local mousePos = input.Position
+            local framePos = MainFrame.AbsolutePosition
+            local frameSize = MainFrame.AbsoluteSize
+            if mousePos.X >= framePos.X and mousePos.X <= framePos.X + frameSize.X and mousePos.Y >= framePos.Y and mousePos.Y <= framePos.Y + 40 then
+                isDragging = true
+                dragStart = mousePos
+                startPos = MainFrame.Position
+            end
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            updateDrag(input)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDragging = false
+        end
+    end)
+
+    -- // Top Bar
+    local TopBar = Instance.new("Frame")
+    TopBar.Size = UDim2.new(1, 0, 0, 40)
+    TopBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    TopBar.Parent = MainFrame
+
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(0.5, 0, 1, 0)
+    Title.BackgroundTransparency = 1
+    Title.Text = "Aimbot Menu"
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.TextSize = 18
+    Title.Font = Enum.Font.SourceSansSemibold
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Parent = TopBar
+    local TitlePadding = Instance.new("UIPadding")
+    TitlePadding.PaddingLeft = UDim.new(0, 15)
+    TitlePadding.Parent = Title
+
+    -- // FPS and Ping Display
+    local StatsFrame = Instance.new("Frame")
+    StatsFrame.Size = UDim2.new(0, 120, 0, 30)
+    StatsFrame.Position = UDim2.new(1, -170, 0, 5)
+    StatsFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    StatsFrame.Parent = TopBar
+    local StatsCorner = Instance.new("UICorner")
+    StatsCorner.CornerRadius = UDim.new(0, 5)
+    StatsCorner.Parent = StatsFrame
+    local StatsLabel = Instance.new("TextLabel")
+    StatsLabel.Size = UDim2.new(1, 0, 1, 0)
+    StatsLabel.BackgroundTransparency = 1
+    StatsLabel.Text = "FPS: -- | Ping: --"
+    StatsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    StatsLabel.TextSize = 14
+    StatsLabel.Font = Enum.Font.SourceSans
+    StatsLabel.TextXAlignment = Enum.TextXAlignment.Center
+    StatsLabel.Parent = StatsFrame
+
+    local lastUpdate = 0
+    local frameCount = 0
+    RunService.RenderStepped:Connect(function(deltaTime)
+        frameCount = frameCount + 1
+        if tick() - lastUpdate >= 1 then
+            local fps = math.floor(frameCount / (tick() - lastUpdate))
+            local ping = math.floor(Players.LocalPlayer:GetNetworkPing() * 1000)
+            StatsLabel.Text = string.format("FPS: %d | Ping: %dms", fps, ping)
+            frameCount = 0
+            lastUpdate = tick()
+        end
+    end)
+
+    -- // Close Button
+    local CloseButton = Instance.new("TextButton")
+    CloseButton.Size = UDim2.new(0, 30, 0, 30)
+    CloseButton.Position = UDim2.new(1, -40, 0, 5)
+    CloseButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    CloseButton.Text = "X"
+    CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseButton.TextSize = 16
+    CloseButton.Font = Enum.Font.SourceSansBold
+    CloseButton.Parent = TopBar
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(0, 5)
+    CloseCorner.Parent = CloseButton
+
+    CloseButton.MouseButton1Click:Connect(function()
+        ScreenGui:Destroy()
+        FOVScreenGui:Destroy()
+    end)
+
+    -- // Sidebar
+    local Sidebar = Instance.new("Frame")
+    Sidebar.Size = UDim2.new(0, 120, 1, -40)
+    Sidebar.Position = UDim2.new(0, 0, 0, 40)
+    Sidebar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    Sidebar.Parent = MainFrame
+
+    local SidebarLayout = Instance.new("UIListLayout")
+    SidebarLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    SidebarLayout.Padding = UDim.new(0, 5)
+    SidebarLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+    SidebarLayout.Parent = Sidebar
+    local SidebarPadding = Instance.new("UIPadding")
+    SidebarPadding.PaddingTop = UDim.new(0, 10)
+    SidebarPadding.PaddingLeft = UDim.new(0, 5)
+    SidebarPadding.PaddingRight = UDim.new(0, 5)
+    SidebarPadding.Parent = Sidebar
+
+    -- // Content Area
+    local Content = Instance.new("Frame")
+    Content.Size = UDim2.new(1, -120, 1, -40)
+    Content.Position = UDim2.new(0, 120, 0, 40)
+    Content.BackgroundTransparency = 1
+    Content.Parent = MainFrame
+
+    -- // Tab System
+    local Pages = {}
+    local ActiveTab = nil
+    local function CreateTab(name)
+        local TabButton = Instance.new("TextButton")
+        TabButton.Size = UDim2.new(1, 0, 0, 40)
+        TabButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+        TabButton.Text = name
+        TabButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+        TabButton.TextSize = 16
+        TabButton.Font = Enum.Font.SourceSans
+        TabButton.Parent = Sidebar
+        local ButtonCorner = Instance.new("UICorner")
+        ButtonCorner.CornerRadius = UDim.new(0, 5)
+        ButtonCorner.Parent = TabButton
+
+        local Page = Instance.new("ScrollingFrame")
+        Page.Size = UDim2.new(1, -10, 1, -10)
+        Page.Position = UDim2.new(0, 5, 0, 5)
+        Page.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        Page.ScrollBarThickness = 3
+        Page.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255)
+        Page.Visible = false
+        Page.Parent = Content
+        local PageLayout = Instance.new("UIListLayout")
+        PageLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        PageLayout.Padding = UDim.new(0, 8)
+        PageLayout.Parent = Page
+        local PagePadding = Instance.new("UIPadding")
+        PagePadding.PaddingLeft = UDim.new(0, 10)
+        PagePadding.PaddingTop = UDim.new(0, 10)
+        PagePadding.Parent = Page
+
+        Pages[name] = Page
+        TabButton.MouseButton1Click:Connect(function()
+            for _, page in pairs(Pages) do page.Visible = false end
+            Page.Visible = true
+            ActiveTab = name
+            for _, button in pairs(Sidebar:GetChildren()) do
+                if button:IsA("TextButton") then
+                    button.BackgroundColor3 = (button.Text == name) and Color3.fromRGB(50, 50, 50) or Color3.fromRGB(35, 35, 35)
+                    button.TextColor3 = (button.Text == name) and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 200, 200)
+                end
+            end
+            TweenService:Create(Page, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
+        end)
+
+        if not ActiveTab then
+            ActiveTab = name
+            Page.Visible = true
+            TabButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        end
+
+        return Page
+    end
+
+    local CombatPage = CreateTab("Combat")
+
+
+    -- // Toggle Component
+    local function CreateToggle(parent, name, callback)
+        local ToggleFrame = Instance.new("Frame")
+        ToggleFrame.Size = UDim2.new(1, -20, 0, 35)
+        ToggleFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        ToggleFrame.Parent = parent
+        local ToggleCorner = Instance.new("UICorner")
+        ToggleCorner.CornerRadius = UDim.new(0, 6)
+        ToggleCorner.Parent = ToggleFrame
+
+        local Label = Instance.new("TextLabel")
+        Label.Size = UDim2.new(0.75, 0, 1, 0)
+        Label.BackgroundTransparency = 1
+        Label.Text = name
+        Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Label.TextSize = 16
+        Label.Font = Enum.Font.SourceSans
+        Label.TextXAlignment = Enum.TextXAlignment.Left
+        Label.Parent = ToggleFrame
+        local LabelPadding = Instance.new("UIPadding")
+        LabelPadding.PaddingLeft = UDim.new(0, 12)
+        LabelPadding.Parent = Label
+
+        local Switch = Instance.new("TextButton")
+        Switch.Size = UDim2.new(0, 50, 0, 25)
+        Switch.Position = UDim2.new(1, -60, 0.5, -12.5)
+        Switch.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        Switch.Text = ""
+        Switch.Parent = ToggleFrame
+        local SwitchCorner = Instance.new("UICorner")
+        SwitchCorner.CornerRadius = UDim.new(0, 12)
+        SwitchCorner.Parent = Switch
+
+        local Knob = Instance.new("Frame")
+        Knob.Size = UDim2.new(0, 21, 0, 21)
+        Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        Knob.Position = UDim2.new(0, 0, 0, 0)
+        Knob.Parent = Switch
+        local KnobCorner = Instance.new("UICorner")
+        KnobCorner.CornerRadius = UDim.new(0, 10)
+        KnobCorner.Parent = Knob
+
+        local isOn = false
+        Switch.MouseButton1Click:Connect(function()
+            isOn = not isOn
+            local targetPos = isOn and UDim2.new(1, -21, 0, 0) or UDim2.new(0, 0, 0, 0)
+            TweenService:Create(Knob, TweenInfo.new(0.2), {Position = targetPos}):Play()
+            TweenService:Create(Switch, TweenInfo.new(0.2), {BackgroundColor3 = isOn and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)}):Play()
+            callback(isOn)
+        end)
+        parent.CanvasSize = UDim2.new(0, 0, 0, parent.UIListLayout.AbsoluteContentSize.Y + 10)
+    end
+
+    -- // Toggles
+    CreateToggle(CombatPage, "Aimbot", function(state)
+        Aimbot.Enabled = state
+        FOVCircle.Visible = state -- FOV circle tied to aimbot state
+    end)
+
+    CreateToggle(CombatPage, "Wall Check", function(state)
+        Aimbot.WallCheckEnabled = state -- Button enables wall check
+    end)
+
+    -- // Menu Toggle with RightShift
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if input.KeyCode == Enum.KeyCode.RightShift and not gameProcessed then
+            Menu.Visible = not Menu.Visible
+            ScreenGui.Enabled = Menu.Visible
+            if Menu.Visible then
+                TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 500, 0, 300), BackgroundTransparency = 0}):Play()
+            else
+                TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1}):Play()
+            end
+        end
     end)
 end
 
--- // Aimbot Logic
+-- // Unstoppable Movement Handler
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.W then
+        Movement.Forward = true
+    elseif input.KeyCode == Enum.KeyCode.S then
+        Movement.Backward = true
+    elseif input.KeyCode == Enum.KeyCode.A then
+        Movement.Left = true
+    elseif input.KeyCode == Enum.KeyCode.D then
+        Movement.Right = true
+    elseif input.KeyCode == Enum.KeyCode.Space then
+        Movement.Jump = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.W then
+        Movement.Forward = false
+    elseif input.KeyCode == Enum.KeyCode.S then
+        Movement.Backward = false
+    elseif input.KeyCode == Enum.KeyCode.A then
+        Movement.Left = false
+    elseif input.KeyCode == Enum.KeyCode.D then
+        Movement.Right = false
+    elseif input.KeyCode == Enum.KeyCode.Space then
+        Movement.Jump = false
+    end
+end)
+
+RunService.Stepped:Connect(function()
+    local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    local rootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if humanoid and rootPart then
+        local moveDirection = Vector3.new(
+            (Movement.Left and -1 or 0) + (Movement.Right and 1 or 0),
+            0,
+            (Movement.Forward and -1 or 0) + (Movement.Backward and 1 or 0)
+        )
+        if moveDirection.Magnitude > 0 then
+            moveDirection = moveDirection.Unit * Movement.MoveSpeed
+            local cameraCFrame = Camera.CFrame
+            local flatMove = (cameraCFrame * CFrame.new(moveDirection)).Position - cameraCFrame.Position
+            rootPart.Velocity = Vector3.new(flatMove.X, rootPart.Velocity.Y, flatMove.Z)
+        else
+            rootPart.Velocity = Vector3.new(0, rootPart.Velocity.Y, 0)
+        end
+        if Movement.Jump and humanoid:GetState() ~= Enum.HumanoidStateType.Jumping then
+            humanoid.Jump = true
+        end
+    end
+end)
+
+-- // Aimbot Logic with Optional Wall Check
 local function GetClosestPlayer()
     local closestPlayer = nil
     local closestStudDistance = math.huge
@@ -107,10 +432,15 @@ local function GetClosestPlayer()
                             local studDistance = (targetPos - localPos).Magnitude
                             if studDistance <= Aimbot.Range then
                                 local switchAllowed = Aimbot.CurrentTarget == nil or (currentTime - Aimbot.LastTargetSwitch > Aimbot.TargetStickTime)
-                                if switchAllowed or studDistance < closestStudDistance * 0.98 then -- Even tighter distance check
-                                    local ray = Ray.new(localPos, (targetPos - localPos).Unit * studDistance)
-                                    local hit, hitPos = workspace:FindPartOnRayWithIgnoreList(ray, {LocalPlayer.Character, player.Character})
-                                    if not hit or hit:IsDescendantOf(player.Character) then
+                                if switchAllowed or studDistance < closestStudDistance * 0.98 then
+                                    if Aimbot.WallCheckEnabled then
+                                        local ray = Ray.new(localPos, (targetPos - localPos).Unit * studDistance)
+                                        local hit, hitPos = workspace:FindPartOnRayWithIgnoreList(ray, {LocalPlayer.Character, player.Character})
+                                        if not hit or hit:IsDescendantOf(player.Character) then
+                                            closestStudDistance = studDistance
+                                            closestPlayer = player
+                                        end
+                                    else
                                         closestStudDistance = studDistance
                                         closestPlayer = player
                                     end
@@ -129,7 +459,7 @@ local function GetClosestPlayer()
     return Aimbot.CurrentTarget
 end
 
--- // Smooth Aiming with Lock-on and Anti-Flick Fix
+-- // Smooth Aiming with Lock-on
 RunService.RenderStepped:Connect(function(delta)
     if Aimbot.Enabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
         local target = GetClosestPlayer()
@@ -142,50 +472,31 @@ RunService.RenderStepped:Connect(function(delta)
                 local deltaPos = Vector2.new(screenPos.X, screenPos.Y) - mousePos
                 local deltaLength = deltaPos.Magnitude
 
-                -- Prevent downward flick by clamping vertical movement
                 if deltaLength > 0 then
                     if deltaLength > Aimbot.MaxMouseDelta then
                         deltaPos = deltaPos.Unit * Aimbot.MaxMouseDelta
                     end
-                    -- Dampen vertical movement to kill downward flick
                     local verticalDelta = deltaPos.Y
-                    if verticalDelta > 0 then -- Only clamp if moving down
-                        deltaPos = Vector2.new(deltaPos.X, math.min(verticalDelta, Aimbot.MaxMouseDelta * 0.5)) -- Half max for vertical
+                    if verticalDelta > 0 then
+                        deltaPos = Vector2.new(deltaPos.X, math.min(verticalDelta, Aimbot.MaxMouseDelta * 0.5))
                     end
 
                     local smoothFactor = 1 / Aimbot.Smoothness
-                    local moveAmount = deltaPos * smoothFactor * delta * 30 -- Reduced speed for stability
+                    local moveAmount = deltaPos * smoothFactor * delta * 30
                     local moveX, moveY = moveAmount.X, moveAmount.Y
 
                     if moveX == moveX and moveY == moveY and math.abs(moveX) < Aimbot.MaxMouseDelta and math.abs(moveY) < Aimbot.MaxMouseDelta then
                         mousemoverel(moveX, moveY)
                     end
                 end
-                -- Lock onto target, prevent switching mid-lock
                 Aimbot.CurrentTarget = target
             end
         end
     else
-        Aimbot.CurrentTarget = nil -- Reset target when not holding left click
-    end
-end)
-
--- // Keybind Toggle
-UserInputService.InputBegan:Connect(function(input)
-    if input.KeyCode == Aimbot.Keybind then
-        Aimbot.Enabled = not Aimbot.Enabled
-        local toggleButton = LocalPlayer.PlayerGui:FindFirstChild("AimbotMenu") and LocalPlayer.PlayerGui.AimbotMenu.Frame.TextButton
-        if toggleButton then
-            toggleButton.Text = "Aimbot: " .. (Aimbot.Enabled and "ON" or "OFF")
-            toggleButton.TextColor3 = Aimbot.Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-        end
-        local fovCircle = LocalPlayer.PlayerGui:FindFirstChild("AimbotMenu") and LocalPlayer.PlayerGui.AimbotMenu.FOVCircle
-        if fovCircle then
-            fovCircle.Visible = Aimbot.Enabled
-        end
+        Aimbot.CurrentTarget = nil
     end
 end)
 
 -- // Initialize
 CreateGUI()
-print("Aimbot button loaded with FOV circle (dark red) at 184.7, Smoothness 1.5, Range 340.3—locked onto heads, no fucking downward flicking, time to massacre!")
+print("Aimbot loaded with neat tabbed gray menu (visible by default, toggle with RightShift), FOV circle (dark red, stays visible when aimbot ON) at 184.7, Smoothness 1.0, Range 340.3—headshot lock, wall check OFF by default (toggle ON via GUI), movement at 16 studs/sec, profile neatly in sidebar bottom-left, drag that shit and dominate!")
