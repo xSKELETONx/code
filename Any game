@@ -5,6 +5,10 @@ local UserInputService = game:GetService("UserInputService")
 local Camera = workspace.CurrentCamera
 local TweenService = game:GetService("TweenService")
 local Teams = game:GetService("Teams")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
+
+local saveFile = "reloading_cheats.json"
 
 -- Variables
 local aimKey = Enum.UserInputType.MouseButton1
@@ -62,6 +66,49 @@ local Toggles = {
     CameraZoom = false,
     TriggerBot = false
 }
+local DefaultSettings = {
+    FOVSize = 100,
+    SpeedScale = 50,
+    JumpBoostScale = 50,
+    SuperJumpScale = 100,
+    SpinBotSpeed = 10,
+    GameFOV = 70,
+    AimbotDistance = 2000,
+    BHOPSpeed = 20,
+    FlySpeed = 50,
+    CameraZoomScale = 30,
+    ESPDistance = 500,
+    BoxThickness = 2,
+    BoxColor = Color3.fromRGB(255, 255, 255)
+}
+local DefaultToggles = {
+    NoClip = false,
+    InfJump = false,
+    Aimbot = false,
+    TeamCheck = false,
+    BoxESP = false,
+    Tracers = false,
+    HealthESP = false,
+    NamesESP = false,
+    DistanceESP = false,
+    SpeedHack = false,
+    Fly = false,
+    JumpBoost = false,
+    SuperJump = false,
+    Invisible = false,
+    SpinBot = false,
+    GodMode = false,
+    AntiAFK = false,
+    ['EnemyTP-Kill'] = false,
+    ShowFOV = false,
+    Jerk = false,
+    BHOP = false,
+    CameraZoom = false,
+    TriggerBot = false
+}
+
+-- Store toggle UI elements for updating on load
+local ToggleUIElements = {}
 
 -- TriggerBot
 _G.triggerbot = false
@@ -174,7 +221,6 @@ local function showPopup()
     PopupFrame:Destroy()
 end
 showPopup()
-
 -- GUI Setup
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 0, 0, 0)
@@ -277,6 +323,34 @@ RunService.RenderStepped:Connect(function(deltaTime)
     end
 end)
 
+-- Save Settings Button
+local SaveButton = Instance.new("TextButton")
+SaveButton.Size = UDim2.new(0, 80, 0, 30)
+SaveButton.Position = UDim2.new(1, -260, 0, 5)
+SaveButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+SaveButton.Text = "Save"
+SaveButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+SaveButton.TextSize = 14
+SaveButton.Font = Enum.Font.SourceSansBold
+SaveButton.Parent = TopBar
+local SaveCorner = Instance.new("UICorner")
+SaveCorner.CornerRadius = UDim.new(0, 5)
+SaveCorner.Parent = SaveButton
+
+-- Unsave Settings Button
+local UnsaveButton = Instance.new("TextButton")
+UnsaveButton.Size = UDim2.new(0, 80, 0, 30)
+UnsaveButton.Position = UDim2.new(1, -350, 0, 5)
+UnsaveButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+UnsaveButton.Text = "Unsave"
+UnsaveButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+UnsaveButton.TextSize = 14
+UnsaveButton.Font = Enum.Font.SourceSansBold
+UnsaveButton.Parent = TopBar
+local UnsaveCorner = Instance.new("UICorner")
+UnsaveCorner.CornerRadius = UDim.new(0, 5)
+UnsaveCorner.Parent = UnsaveButton
+
 local CloseButton = Instance.new("TextButton")
 CloseButton.Size = UDim2.new(0, 30, 0, 30)
 CloseButton.Position = UDim2.new(1, -40, 0, 5)
@@ -318,7 +392,9 @@ SidebarLayout.Padding = UDim.new(0, 5)
 SidebarLayout.Parent = Sidebar
 local SidebarPadding = Instance.new("UIPadding")
 SidebarPadding.PaddingTop = UDim.new(0, 10)
-SidebarPadding.Parent = Sidebarlocal Content = Instance.new("Frame")
+SidebarPadding.Parent = Sidebar
+
+local Content = Instance.new("Frame")
 Content.Size = UDim2.new(1, -150, 1, -40)
 Content.Position = UDim2.new(0, 150, 0, 40)
 Content.BackgroundTransparency = 1
@@ -386,7 +462,6 @@ local MovementPage = CreateTab("Movement")
 local VisualsPage = CreateTab("Visuals")
 local MiscPage = CreateTab("Misc")
 local PlayerListPage = CreateTab("PlayerList")
-
 -- UI Components
 local function CreateToggle(parent, name, callback)
     local ToggleFrame = Instance.new("Frame")
@@ -431,14 +506,27 @@ local function CreateToggle(parent, name, callback)
     KnobCorner.Parent = Knob
 
     Toggles[name] = false
+    ToggleUIElements[name] = { Switch = Switch, Knob = Knob } -- Store UI elements
+
+    local function updateToggleUI(state)
+        local targetPos = state and UDim2.new(1, -21, 0, 0) or UDim2.new(0, 0, 0, 0)
+        local targetColor = state and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
+        TweenService:Create(Knob, TweenInfo.new(0.2), {Position = targetPos}):Play()
+        TweenService:Create(Switch, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
+    end
+
     Switch.MouseButton1Click:Connect(function()
         Toggles[name] = not Toggles[name]
-        local targetPos = Toggles[name] and UDim2.new(1, -21, 0, 0) or UDim2.new(0, 0, 0, 0)
-        TweenService:Create(Knob, TweenInfo.new(0.2), {Position = targetPos}):Play()
-        TweenService:Create(Switch, TweenInfo.new(0.2), {BackgroundColor3 = Toggles[name] and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)}):Play()
+        updateToggleUI(Toggles[name])
         callback(Toggles[name])
     end)
-    parent.CanvasSize = UDim2.new(0, 0, 0, parent.UIListLayout.AbsoluteContentSize.Y + 10)
+
+    -- Return function to programmatically set toggle state
+    return function(state)
+        Toggles[name] = state
+        updateToggleUI(state)
+        callback(state)
+    end
 end
 
 local function CreateSlider(parent, name, min, max, default, callback)
@@ -650,7 +738,6 @@ UserIdLabel.Parent = ProfileFrame
 local UserIdPadding = Instance.new("UIPadding")
 UserIdPadding.PaddingLeft = UDim.new(0, 5)
 UserIdPadding.Parent = UserIdLabel
-
 -- Player Action Menu
 local PlayerActionFrame = nil
 local function CreatePlayerActionMenu(player)
@@ -910,14 +997,15 @@ end)
 
 Players.PlayerRemoving:Connect(function(leavingPlayer)
     if ActiveTab == "PlayerList" then updatePlayerList() end
-end)local FOVCircle = Drawing.new("Circle")
+end)
+
+local FOVCircle = Drawing.new("Circle")
 FOVCircle.Visible = false
 FOVCircle.Radius = Settings.FOVSize
 FOVCircle.Thickness = 2
 FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 FOVCircle.Filled = false
 FOVCircle.Color = Color3.fromRGB(255, 255, 255)
-
 local function ToggleAimbot(state)
     Toggles.Aimbot = state
     FOVCircle.Visible = state and Toggles.ShowFOV
@@ -1401,56 +1489,19 @@ local function ToggleHealthESP(state) Toggles.HealthESP = state; RefreshESP() en
 local function ToggleNamesESP(state) Toggles.NamesESP = state; RefreshESP() end
 local function ToggleDistanceESP(state) Toggles.DistanceESP = state; RefreshESP() end
 
--- Aimbot Key Toggle
-local AimKeyFrame = Instance.new("Frame")
-AimKeyFrame.Size = UDim2.new(1, -20, 0, 35)
-AimKeyFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-AimKeyFrame.Parent = CombatPage
-local AimKeyCorner = Instance.new("UICorner")
-AimKeyCorner.CornerRadius = UDim.new(0, 6)
-AimKeyCorner.Parent = AimKeyFrame
-local AimKeyLabel = Instance.new("TextLabel")
-AimKeyLabel.Size = UDim2.new(0.5, 0, 1, 0)
-AimKeyLabel.BackgroundTransparency = 1
-AimKeyLabel.Text = "Aimbot Key:"
-AimKeyLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-AimKeyLabel.TextSize = 16
-AimKeyLabel.Font = Enum.Font.SourceSans
-AimKeyLabel.TextXAlignment = Enum.TextXAlignment.Left
-AimKeyLabel.Parent = AimKeyFrame
-local AimKeyLabelPadding = Instance.new("UIPadding")
-AimKeyLabelPadding.PaddingLeft = UDim.new(0, 12)
-AimKeyLabelPadding.Parent = AimKeyLabel
-local AimKeyToggle = Instance.new("TextButton")
-AimKeyToggle.Size = UDim2.new(0.4, 0, 0.8, 0)
-AimKeyToggle.Position = UDim2.new(0.55, 0, 0.1, 0)
-AimKeyToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-AimKeyToggle.Text = aimKeyName
-AimKeyToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-AimKeyToggle.TextSize = 16
-AimKeyToggle.Font = Enum.Font.SourceSans
-AimKeyToggle.Parent = AimKeyFrame
-local AimKeyToggleCorner = Instance.new("UICorner")
-AimKeyToggleCorner.CornerRadius = UDim.new(0, 6)
-AimKeyToggleCorner.Parent = AimKeyToggle
-AimKeyToggle.MouseButton1Click:Connect(function()
-    aimKey = (aimKey == Enum.UserInputType.MouseButton1) and Enum.UserInputType.MouseButton2 or Enum.UserInputType.MouseButton1
-    aimKeyName = getInputName(aimKey)
-    AimKeyToggle.Text = aimKeyName
-end)
-CombatPage.CanvasSize = UDim2.new(0, 0, 0, CombatPage.UIListLayout.AbsoluteContentSize.Y + 10)
-
--- Assign Features
+-- Create Toggles and Sliders
 CreateToggle(CombatPage, "Aimbot", ToggleAimbot)
 CreateToggle(CombatPage, "TeamCheck", ToggleTeamCheck)
 CreateToggle(CombatPage, "ShowFOV", ToggleShowFOV)
 CreateToggle(CombatPage, "TriggerBot", ToggleTriggerBot)
 CreateSlider(CombatPage, "FOVSize", 50, 500, Settings.FOVSize, function(value)
-    Settings.FOVSize = value
     FOVCircle.Radius = value
+    Settings.FOVSize = value
 end)
-CreateSlider(CombatPage, "AimbotDistance", 100, 2000, Settings.AimbotDistance, function(value) Settings.AimbotDistance = value end)
-CreateToggle(CombatPage, "EnemyTP-Kill", ToggleEnemyTPKill)
+CreateSlider(CombatPage, "AimbotDistance", 100, 5000, Settings.AimbotDistance, function(value)
+    Settings.AimbotDistance = value
+end)
+local EnemyTPKillToggle = CreateToggle(CombatPage, "EnemyTP-Kill", ToggleEnemyTPKill)
 
 CreateToggle(MovementPage, "NoClip", ToggleNoClip)
 CreateToggle(MovementPage, "InfJump", ToggleInfJump)
@@ -1459,19 +1510,28 @@ CreateToggle(MovementPage, "Fly", ToggleFly)
 CreateToggle(MovementPage, "JumpBoost", ToggleJumpBoost)
 CreateToggle(MovementPage, "SuperJump", ToggleSuperJump)
 CreateToggle(MovementPage, "BHOP", ToggleBHOP)
-CreateSlider(MovementPage, "SpeedScale", 16, 500, Settings.SpeedScale, function(value)
+CreateSlider(MovementPage, "SpeedScale", 16, 200, Settings.SpeedScale, function(value)
     Settings.SpeedScale = value
-    if Toggles.SpeedHack then ToggleSpeedHack(true) end
+    if Toggles.SpeedHack and LocalPlayer.Character then
+        local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
+        if humanoid then humanoid.WalkSpeed = value end
+    end
 end)
-CreateSlider(MovementPage, "JumpBoostScale", 50, 500, Settings.JumpBoostScale, function(value)
-    Settings.JumpBoostScale = value
-    if Toggles.JumpBoost then ToggleJumpBoost(true) end
-end)
-CreateSlider(MovementPage, "SuperJumpScale", 50, 500, Settings.SuperJumpScale, function(value) Settings.SuperJumpScale = value end)
-CreateSlider(MovementPage, "BHOPSpeed", 10, 500, Settings.BHOPSpeed, function(value) Settings.BHOPSpeed = value end)
-CreateSlider(MovementPage, "FlySpeed", 10, 500, Settings.FlySpeed, function(value)
+CreateSlider(MovementPage, "FlySpeed", 10, 200, Settings.FlySpeed, function(value)
     Settings.FlySpeed = value
-    if Toggles.Fly then ToggleFly(true) end
+end)
+CreateSlider(MovementPage, "JumpBoostScale", 50, 200, Settings.JumpBoostScale, function(value)
+    Settings.JumpBoostScale = value
+    if Toggles.JumpBoost and LocalPlayer.Character then
+        local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
+        if humanoid then humanoid.JumpPower = value end
+    end
+end)
+CreateSlider(MovementPage, "SuperJumpScale", 50, 500, Settings.SuperJumpScale, function(value)
+    Settings.SuperJumpScale = value
+end)
+CreateSlider(MovementPage, "BHOPSpeed", 10, 100, Settings.BHOPSpeed, function(value)
+    Settings.BHOPSpeed = value
 end)
 
 CreateToggle(VisualsPage, "BoxESP", ToggleBoxESP)
@@ -1479,31 +1539,155 @@ CreateToggle(VisualsPage, "Tracers", ToggleTracers)
 CreateToggle(VisualsPage, "HealthESP", ToggleHealthESP)
 CreateToggle(VisualsPage, "NamesESP", ToggleNamesESP)
 CreateToggle(VisualsPage, "DistanceESP", ToggleDistanceESP)
-CreateSlider(VisualsPage, "ESPDistance", 100, 5000, 500, function(value) Settings.ESPDistance = value end)
-CreateSlider(VisualsPage, "BoxThickness", 2, 10, 2, function(value) Settings.BoxThickness = value; RefreshESP() end)
+CreateSlider(VisualsPage, "ESPDistance", 100, 5000, Settings.ESPDistance, function(value)
+    Settings.ESPDistance = value
+    RefreshESP()
+end)
+CreateSlider(VisualsPage, "BoxThickness", 1, 5, Settings.BoxThickness, function(value)
+    Settings.BoxThickness = value
+    RefreshESP()
+end)
 
-CreateToggle(MiscPage, "SpinBot", ToggleSpinBot)
 CreateToggle(MiscPage, "Invisible", ToggleInvisible)
+CreateToggle(MiscPage, "SpinBot", ToggleSpinBot)
 CreateToggle(MiscPage, "GodMode", ToggleGodMode)
 CreateToggle(MiscPage, "AntiAFK", ToggleAntiAFK)
 CreateToggle(MiscPage, "Jerk", ToggleJerk)
 CreateToggle(MiscPage, "CameraZoom", ToggleCameraZoom)
-CreateSlider(MiscPage, "SpinBotSpeed", 10, 500, Settings.SpinBotSpeed, function(value)
+CreateSlider(MiscPage, "SpinBotSpeed", 1, 100, Settings.SpinBotSpeed, function(value)
     Settings.SpinBotSpeed = value
-    if Toggles.SpinBot then ToggleSpinBot(false); ToggleSpinBot(true) end
 end)
 CreateFOVSlider(MiscPage, "GameFOV", Settings.GameFOV, function(value)
-    Settings.GameFOV = math.clamp(value, 60, 120)
-    Camera.FieldOfView = Settings.GameFOV
+    Settings.GameFOV = value
+    if not isZooming then Camera.FieldOfView = value end
 end)
-CreateSlider(MiscPage, "CameraZoomScale", 10, 500, Settings.CameraZoomScale, function(value)
+CreateSlider(MiscPage, "CameraZoomScale", 10, 60, Settings.CameraZoomScale, function(value)
     Settings.CameraZoomScale = value
-    if Toggles.CameraZoom and isZooming then Camera.FieldOfView = 70 - value end
 end)
 
--- Initialize
-for _, player in pairs(Players:GetPlayers()) do CreateBoxESP(player) end
-Players.PlayerAdded:Connect(CreateBoxESP)
+-- Save and Load Settings
+local function SaveSettings()
+    local data = {Toggles = Toggles, Settings = Settings}
+    local json = HttpService:JSONEncode(data)
+    writefile(saveFile, json)
+end
+
+local function LoadSettings()
+    if isfile(saveFile) then
+        local json = readfile(saveFile)
+        local success, data = pcall(function() return HttpService:JSONDecode(json) end)
+        if success and data then
+            for key, value in pairs(data.Toggles or {}) do
+                if Toggles[key] ~= nil then
+                    Toggles[key] = value
+                    -- Update UI for the toggle
+                    if ToggleUIElements[key] then
+                        local ui = ToggleUIElements[key]
+                        local targetPos = value and UDim2.new(1, -21, 0, 0) or UDim2.new(0, 0, 0, 0)
+                        local targetColor = value and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
+                        TweenService:Create(ui.Knob, TweenInfo.new(0.2), {Position = targetPos}):Play()
+                        TweenService:Create(ui.Switch, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
+                    end
+                    -- Call the corresponding toggle function
+                    if key == "Aimbot" then ToggleAimbot(value)
+                    elseif key == "TeamCheck" then ToggleTeamCheck(value)
+                    elseif key == "ShowFOV" then ToggleShowFOV(value)
+                    elseif key == "EnemyTP-Kill" then ToggleEnemyTPKill(value)
+                    elseif key == "NoClip" then ToggleNoClip(value)
+                    elseif key == "InfJump" then ToggleInfJump(value)
+                    elseif key == "SpeedHack" then ToggleSpeedHack(value)
+                    elseif key == "Fly" then ToggleFly(value)
+                    elseif key == "JumpBoost" then ToggleJumpBoost(value)
+                    elseif key == "SuperJump" then ToggleSuperJump(value)
+                    elseif key == "Invisible" then ToggleInvisible(value)
+                    elseif key == "SpinBot" then ToggleSpinBot(value)
+                    elseif key == "GodMode" then ToggleGodMode(value)
+                    elseif key == "AntiAFK" then ToggleAntiAFK(value)
+                    elseif key == "Jerk" then ToggleJerk(value)
+                    elseif key == "BHOP" then ToggleBHOP(value)
+                    elseif key == "CameraZoom" then ToggleCameraZoom(value)
+                    elseif key == "BoxESP" then ToggleBoxESP(value)
+                    elseif key == "Tracers" then ToggleTracers(value)
+                    elseif key == "HealthESP" then ToggleHealthESP(value)
+                    elseif key == "NamesESP" then ToggleNamesESP(value)
+                    elseif key == "DistanceESP" then ToggleDistanceESP(value)
+                    elseif key == "TriggerBot" then ToggleTriggerBot(value)
+                    end
+                end
+            end
+            for key, value in pairs(data.Settings or {}) do
+                if Settings[key] ~= nil then
+                    Settings[key] = value
+                end
+            end
+        end
+    end
+end
+
+local function UnsaveSettings()
+    if isfile(saveFile) then
+        delfile(saveFile)
+        for key, _ in pairs(Toggles) do
+            Toggles[key] = DefaultToggles[key]
+            if ToggleUIElements[key] then
+                local ui = ToggleUIElements[key]
+                local targetPos = UDim2.new(0, 0, 0, 0)
+                local targetColor = Color3.fromRGB(60, 60, 60)
+                TweenService:Create(ui.Knob, TweenInfo.new(0.2), {Position = targetPos}):Play()
+                TweenService:Create(ui.Switch, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
+            end
+        end
+        for key, value in pairs(DefaultSettings) do
+            Settings[key] = value
+        end
+        for _, toggle in pairs({
+            {name = "Aimbot", func = ToggleAimbot},
+            {name = "TeamCheck", func = ToggleTeamCheck},
+            {name = "ShowFOV", func = ToggleShowFOV},
+            {name = "EnemyTP-Kill", func = ToggleEnemyTPKill},
+            {name = "NoClip", func = ToggleNoClip},
+            {name = "InfJump", func = ToggleInfJump},
+            {name = "SpeedHack", func = ToggleSpeedHack},
+            {name = "Fly", func = ToggleFly},
+            {name = "JumpBoost", func = ToggleJumpBoost},
+            {name = "SuperJump", func = ToggleSuperJump},
+            {name = "Invisible", func = ToggleInvisible},
+            {name = "SpinBot", func = ToggleSpinBot},
+            {name = "GodMode", func = ToggleGodMode},
+            {name = "AntiAFK", func = ToggleAntiAFK},
+            {name = "Jerk", func = ToggleJerk},
+            {name = "BHOP", func = ToggleBHOP},
+            {name = "CameraZoom", func = ToggleCameraZoom},
+            {name = "BoxESP", func = ToggleBoxESP},
+            {name = "Tracers", func = ToggleTracers},
+            {name = "HealthESP", func = ToggleHealthESP},
+            {name = "NamesESP", func = ToggleNamesESP},
+            {name = "DistanceESP", func = ToggleDistanceESP},
+            {name = "TriggerBot", func = ToggleTriggerBot}
+        }) do
+            toggle.func(Toggles[toggle.name])
+        end
+    end
+end
+
+SaveButton.MouseButton1Click:Connect(SaveSettings)
+UnsaveButton.MouseButton1Click:Connect(UnsaveSettings)
+
+-- Initialize ESP for existing players
+for _, player in pairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then
+        CreateBoxESP(player)
+    end
+end
+
+-- Handle new players
+Players.PlayerAdded:Connect(function(player)
+    if player ~= LocalPlayer then
+        CreateBoxESP(player)
+    end
+end)
+
+-- Handle player leaving
 Players.PlayerRemoving:Connect(function(player)
     if ESP[player] then
         for _, obj in pairs(ESP[player]) do
@@ -1511,20 +1695,12 @@ Players.PlayerRemoving:Connect(function(player)
         end
         ESP[player] = nil
     end
-    RunService:UnbindFromRenderStep("BoxESP2D_" .. player.Name)
 end)
-RunService.RenderStepped:Connect(function()
-    FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    FOVCircle.Radius = Settings.FOVSize
-    FOVCircle.Visible = Toggles.Aimbot and Toggles.ShowFOV
-end)
-LocalPlayer.CharacterAdded:Connect(function() task.wait(0.5) end)
 
--- Hide/Unhide Toggle
-local isGuiHidden = false
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if input.KeyCode == Enum.KeyCode.RightShift and not gameProcessed then
-        isGuiHidden = not isGuiHidden
-        MainFrame.Visible = not isGuiHidden
-    end
-end)
+-- Load settings on startup
+LoadSettings()
+
+-- Update Canvas Sizes
+for _, page in pairs(Pages) do
+    page.CanvasSize = UDim2.new(0, 0, 0, page.UIListLayout.AbsoluteContentSize.Y + 10)
+end
