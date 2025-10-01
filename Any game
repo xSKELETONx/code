@@ -7,7 +7,6 @@ local TweenService = game:GetService("TweenService")
 local Teams = game:GetService("Teams")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
-
 local saveFile = "reloading_cheats.json"
 
 -- Variables
@@ -106,10 +105,8 @@ local DefaultToggles = {
     CameraZoom = false,
     TriggerBot = false
 }
-
 -- Store toggle UI elements for updating on load
 local ToggleUIElements = {}
-
 -- TriggerBot
 _G.triggerbot = false
 local Clicked = false
@@ -163,7 +160,6 @@ local function ToggleTriggerBot(state)
         end
     end
 end
-
 -- Utility Functions
 local function getInputName(input)
     if input:IsA("EnumItem") and input.EnumType == Enum.UserInputType then
@@ -171,15 +167,12 @@ local function getInputName(input)
     end
     return tostring(input)
 end
-
 local function hasTeams()
     return #Teams:GetTeams() > 0 and LocalPlayer.Team ~= nil
 end
-
 local function isValidCharacter(player)
     return player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0
 end
-
 -- Popup Setup
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Parent = game.CoreGui
@@ -187,7 +180,6 @@ ScreenGui.Name = "Reloading :) Menu"
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.Enabled = true
 ScreenGui.ResetOnSpawn = false
-
 local PopupFrame = Instance.new("Frame")
 PopupFrame.Size = UDim2.new(0, 300, 0, 100)
 PopupFrame.Position = UDim2.new(0.5, -150, 0.5, -50)
@@ -195,11 +187,9 @@ PopupFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 PopupFrame.BorderSizePixel = 0
 PopupFrame.Parent = ScreenGui
 PopupFrame.BackgroundTransparency = 1
-
 local PopupCorner = Instance.new("UICorner")
 PopupCorner.CornerRadius = UDim.new(0, 12)
 PopupCorner.Parent = PopupFrame
-
 local PopupText = Instance.new("TextLabel")
 PopupText.Size = UDim2.new(1, 0, 1, 0)
 PopupText.BackgroundTransparency = 1
@@ -209,7 +199,6 @@ PopupText.TextSize = 24
 PopupText.Font = Enum.Font.SourceSansBold
 PopupText.TextTransparency = 1
 PopupText.Parent = PopupFrame
-
 -- Popup Animation
 local function showPopup()
     TweenService:Create(PopupFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
@@ -231,22 +220,18 @@ MainFrame.Visible = true
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundTransparency = 1
 TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 700, 0, 450), BackgroundTransparency = 0}):Play()
-
 local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 8)
 MainCorner.Parent = MainFrame
-
 -- Smooth Dragging for MainFrame
 local isDraggingMain = false
 local dragStartMain = nil
 local startPosMain = nil
-
 local function updateMainDrag(input)
     local delta = input.Position - dragStartMain
     local newPos = UDim2.new(startPosMain.X.Scale, startPosMain.X.Offset + delta.X, startPosMain.Y.Scale, startPosMain.Y.Offset + delta.Y)
     TweenService:Create(MainFrame, TweenInfo.new(0.1, Enum.EasingStyle.Linear), {Position = newPos}):Play()
 end
-
 UserInputService.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 and MainFrame.Visible then
         local mousePos = input.Position
@@ -259,24 +244,20 @@ UserInputService.InputBegan:Connect(function(input)
         end
     end
 end)
-
 UserInputService.InputChanged:Connect(function(input)
     if isDraggingMain and input.UserInputType == Enum.UserInputType.MouseMovement then
         updateMainDrag(input)
     end
 end)
-
 UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         isDraggingMain = false
     end
 end)
-
 local TopBar = Instance.new("Frame")
 TopBar.Size = UDim2.new(1, 0, 0, 40)
 TopBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 TopBar.Parent = MainFrame
-
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(0.5, 0, 1, 0)
 Title.BackgroundTransparency = 1
@@ -289,7 +270,6 @@ Title.Parent = TopBar
 local TitlePadding = Instance.new("UIPadding")
 TitlePadding.PaddingLeft = UDim.new(0, 15)
 TitlePadding.Parent = Title
-
 -- FPS and Ping Display
 local StatsFrame = Instance.new("Frame")
 StatsFrame.Size = UDim2.new(0, 120, 0, 30)
@@ -308,7 +288,6 @@ StatsLabel.TextSize = 14
 StatsLabel.Font = Enum.Font.SourceSans
 StatsLabel.TextXAlignment = Enum.TextXAlignment.Center
 StatsLabel.Parent = StatsFrame
-
 -- Update FPS and Ping
 local lastUpdate = 0
 local frameCount = 0
@@ -322,7 +301,6 @@ RunService.RenderStepped:Connect(function(deltaTime)
         lastUpdate = tick()
     end
 end)
-
 -- Save Settings Button
 local SaveButton = Instance.new("TextButton")
 SaveButton.Size = UDim2.new(0, 80, 0, 30)
@@ -336,7 +314,6 @@ SaveButton.Parent = TopBar
 local SaveCorner = Instance.new("UICorner")
 SaveCorner.CornerRadius = UDim.new(0, 5)
 SaveCorner.Parent = SaveButton
-
 -- Unsave Settings Button
 local UnsaveButton = Instance.new("TextButton")
 UnsaveButton.Size = UDim2.new(0, 80, 0, 30)
@@ -350,7 +327,6 @@ UnsaveButton.Parent = TopBar
 local UnsaveCorner = Instance.new("UICorner")
 UnsaveCorner.CornerRadius = UDim.new(0, 5)
 UnsaveCorner.Parent = UnsaveButton
-
 local CloseButton = Instance.new("TextButton")
 CloseButton.Size = UDim2.new(0, 30, 0, 30)
 CloseButton.Position = UDim2.new(1, -40, 0, 5)
@@ -363,7 +339,6 @@ CloseButton.Parent = TopBar
 local CloseCorner = Instance.new("UICorner")
 CloseCorner.CornerRadius = UDim.new(0, 5)
 CloseCorner.Parent = CloseButton
-
 CloseButton.MouseButton1Click:Connect(function()
     for _, conn in pairs(Connections) do
         pcall(function() conn:Disconnect() end)
@@ -379,13 +354,11 @@ CloseButton.MouseButton1Click:Connect(function()
     if PlayerActionFrame then PlayerActionFrame:Destroy() end
     MainFrame:Destroy()
 end)
-
 local Sidebar = Instance.new("Frame")
 Sidebar.Size = UDim2.new(0, 150, 1, -40)
 Sidebar.Position = UDim2.new(0, 0, 0, 40)
 Sidebar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 Sidebar.Parent = MainFrame
-
 local SidebarLayout = Instance.new("UIListLayout")
 SidebarLayout.SortOrder = Enum.SortOrder.LayoutOrder
 SidebarLayout.Padding = UDim.new(0, 5)
@@ -393,13 +366,11 @@ SidebarLayout.Parent = Sidebar
 local SidebarPadding = Instance.new("UIPadding")
 SidebarPadding.PaddingTop = UDim.new(0, 10)
 SidebarPadding.Parent = Sidebar
-
 local Content = Instance.new("Frame")
 Content.Size = UDim2.new(1, -150, 1, -40)
 Content.Position = UDim2.new(0, 150, 0, 40)
 Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
-
 local Pages = {}
 local ActiveTab = nil
 local function CreateTab(name)
@@ -411,11 +382,9 @@ local function CreateTab(name)
     TabButton.TextSize = 16
     TabButton.Font = Enum.Font.SourceSans
     TabButton.Parent = Sidebar
-
     local ButtonCorner = Instance.new("UICorner")
     ButtonCorner.CornerRadius = UDim.new(0, 5)
     ButtonCorner.Parent = TabButton
-
     local Page = Instance.new("ScrollingFrame")
     Page.Size = UDim2.new(1, -10, 1, -10)
     Page.Position = UDim2.new(0, 5, 0, 5)
@@ -424,7 +393,6 @@ local function CreateTab(name)
     Page.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255)
     Page.Visible = false
     Page.Parent = Content
-
     local PageLayout = Instance.new("UIListLayout")
     PageLayout.SortOrder = Enum.SortOrder.LayoutOrder
     PageLayout.Padding = UDim.new(0, 8)
@@ -432,7 +400,6 @@ local function CreateTab(name)
     local PagePadding = Instance.new("UIPadding")
     PagePadding.PaddingLeft = UDim.new(0, 10)
     PagePadding.Parent = Page
-
     Pages[name] = Page
     TabButton.MouseButton1Click:Connect(function()
         for _, page in pairs(Pages) do page.Visible = false end
@@ -446,17 +413,14 @@ local function CreateTab(name)
         end
         TweenService:Create(Page, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
     end)
-
     if not ActiveTab then
         ActiveTab = name
         Page.Visible = true
         TabButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
         TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     end
-
     return Page
 end
-
 local CombatPage = CreateTab("Combat")
 local MovementPage = CreateTab("Movement")
 local VisualsPage = CreateTab("Visuals")
@@ -468,11 +432,9 @@ local function CreateToggle(parent, name, callback)
     ToggleFrame.Size = UDim2.new(1, -20, 0, 35)
     ToggleFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     ToggleFrame.Parent = parent
-
     local ToggleCorner = Instance.new("UICorner")
     ToggleCorner.CornerRadius = UDim.new(0, 6)
     ToggleCorner.Parent = ToggleFrame
-
     local Label = Instance.new("TextLabel")
     Label.Size = UDim2.new(0.75, 0, 1, 0)
     Label.BackgroundTransparency = 1
@@ -485,7 +447,6 @@ local function CreateToggle(parent, name, callback)
     local LabelPadding = Instance.new("UIPadding")
     LabelPadding.PaddingLeft = UDim.new(0, 12)
     LabelPadding.Parent = Label
-
     local Switch = Instance.new("TextButton")
     Switch.Size = UDim2.new(0, 50, 0, 25)
     Switch.Position = UDim2.new(1, -60, 0.5, -12.5)
@@ -495,7 +456,6 @@ local function CreateToggle(parent, name, callback)
     local SwitchCorner = Instance.new("UICorner")
     SwitchCorner.CornerRadius = UDim.new(0, 12)
     SwitchCorner.Parent = Switch
-
     local Knob = Instance.new("Frame")
     Knob.Size = UDim2.new(0, 21, 0, 21)
     Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -504,41 +464,33 @@ local function CreateToggle(parent, name, callback)
     local KnobCorner = Instance.new("UICorner")
     KnobCorner.CornerRadius = UDim.new(0, 10)
     KnobCorner.Parent = Knob
-
     Toggles[name] = false
-    ToggleUIElements[name] = { Switch = Switch, Knob = Knob } -- Store UI elements
-
+    ToggleUIElements[name] = { Switch = Switch, Knob = Knob }
     local function updateToggleUI(state)
         local targetPos = state and UDim2.new(1, -21, 0, 0) or UDim2.new(0, 0, 0, 0)
         local targetColor = state and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
         TweenService:Create(Knob, TweenInfo.new(0.2), {Position = targetPos}):Play()
         TweenService:Create(Switch, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
     end
-
     Switch.MouseButton1Click:Connect(function()
         Toggles[name] = not Toggles[name]
         updateToggleUI(Toggles[name])
         callback(Toggles[name])
     end)
-
-    -- Return function to programmatically set toggle state
     return function(state)
         Toggles[name] = state
         updateToggleUI(state)
         callback(state)
     end
 end
-
 local function CreateSlider(parent, name, min, max, default, callback)
     local SliderFrame = Instance.new("Frame")
     SliderFrame.Size = UDim2.new(1, -20, 0, 50)
     SliderFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     SliderFrame.Parent = parent
-
     local SliderCorner = Instance.new("UICorner")
     SliderCorner.CornerRadius = UDim.new(0, 6)
     SliderCorner.Parent = SliderFrame
-
     local Label = Instance.new("TextLabel")
     Label.Size = UDim2.new(1, 0, 0, 20)
     Label.BackgroundTransparency = 1
@@ -551,7 +503,6 @@ local function CreateSlider(parent, name, min, max, default, callback)
     local LabelPadding = Instance.new("UIPadding")
     LabelPadding.PaddingLeft = UDim.new(0, 12)
     LabelPadding.Parent = Label
-
     local SliderBar = Instance.new("Frame")
     SliderBar.Size = UDim2.new(1, -30, 0, 8)
     SliderBar.Position = UDim2.new(0, 15, 0, 25)
@@ -560,7 +511,6 @@ local function CreateSlider(parent, name, min, max, default, callback)
     local BarCorner = Instance.new("UICorner")
     BarCorner.CornerRadius = UDim.new(0, 4)
     BarCorner.Parent = SliderBar
-
     local Fill = Instance.new("Frame")
     Fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
     Fill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -568,7 +518,6 @@ local function CreateSlider(parent, name, min, max, default, callback)
     local FillCorner = Instance.new("UICorner")
     FillCorner.CornerRadius = UDim.new(0, 4)
     FillCorner.Parent = Fill
-
     local SliderButton = Instance.new("TextButton")
     SliderButton.Size = UDim2.new(1, 0, 1, 0)
     SliderButton.BackgroundTransparency = 1
@@ -597,105 +546,6 @@ local function CreateSlider(parent, name, min, max, default, callback)
     end)
     parent.CanvasSize = UDim2.new(0, 0, 0, parent.UIListLayout.AbsoluteContentSize.Y + 10)
 end
-
-local function CreateFOVSlider(parent, name, default, callback)
-    local SliderFrame = Instance.new("Frame")
-    SliderFrame.Size = UDim2.new(1, -20, 0, 50)
-    SliderFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    SliderFrame.Parent = parent
-
-    local SliderCorner = Instance.new("UICorner")
-    SliderCorner.CornerRadius = UDim.new(0, 6)
-    SliderCorner.Parent = SliderFrame
-
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(0.6, 0, 0, 20)
-    Label.BackgroundTransparency = 1
-    Label.Text = name .. ": " .. default
-    Label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Label.TextSize = 14
-    Label.Font = Enum.Font.SourceSans
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = SliderFrame
-    local LabelPadding = Instance.new("UIPadding")
-    LabelPadding.PaddingLeft = UDim.new(0, 12)
-    LabelPadding.Parent = Label
-
-    local ValueBox = Instance.new("TextBox")
-    ValueBox.Size = UDim2.new(0.3, 0, 0, 20)
-    ValueBox.Position = UDim2.new(0.7, 0, 0, 0)
-    ValueBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    ValueBox.Text = tostring(default)
-    ValueBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ValueBox.TextSize = 14
-    ValueBox.Font = Enum.Font.SourceSans
-    ValueBox.Parent = SliderFrame
-    local ValueBoxCorner = Instance.new("UICorner")
-    ValueBoxCorner.CornerRadius = UDim.new(0, 6)
-    ValueBoxCorner.Parent = ValueBox
-
-    local SliderBar = Instance.new("Frame")
-    SliderBar.Size = UDim2.new(1, -30, 0, 8)
-    SliderBar.Position = UDim2.new(0, 15, 0, 25)
-    SliderBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    SliderBar.Parent = SliderFrame
-    local BarCorner = Instance.new("UICorner")
-    BarCorner.CornerRadius = UDim.new(0, 4)
-    BarCorner.Parent = SliderBar
-
-    local Fill = Instance.new("Frame")
-    Fill.Size = UDim2.new((default - 60) / (120 - 60), 0, 1, 0)
-    Fill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    Fill.Parent = SliderBar
-    local FillCorner = Instance.new("UICorner")
-    FillCorner.CornerRadius = UDim.new(0, 4)
-    FillCorner.Parent = Fill
-
-    local SliderButton = Instance.new("TextButton")
-    SliderButton.Size = UDim2.new(1, 0, 1, 0)
-    SliderButton.BackgroundTransparency = 1
-    SliderButton.Text = ""
-    SliderButton.Parent = SliderBar
-    SliderButton.MouseButton1Down:Connect(function()
-        local draggingConnection
-        local endConnection
-        draggingConnection = RunService.RenderStepped:Connect(function()
-            local mousePos = UserInputService:GetMouseLocation()
-            local barPos = SliderBar.AbsolutePosition
-            local barSize = SliderBar.AbsoluteSize.X
-            local relative = math.clamp((mousePos.X - barPos.X) / barSize, 0, 1)
-            local value = math.floor(60 + (120 - 60) * relative)
-            Settings[name] = value
-            Label.Text = name .. ": " .. value
-            ValueBox.Text = tostring(value)
-            Fill.Size = UDim2.new(relative, 0, 1, 0)
-            callback(value)
-        end)
-        endConnection = UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                draggingConnection:Disconnect()
-                endConnection:Disconnect()
-            end
-        end)
-    end)
-
-    ValueBox.FocusLost:Connect(function(enterPressed)
-        if enterPressed then
-            local value = tonumber(ValueBox.Text)
-            if value then
-                value = math.clamp(value, 60, 120)
-                Settings[name] = value
-                Label.Text = name .. ": " .. value
-                Fill.Size = UDim2.new((value - 60) / (120 - 60), 0, 1, 0)
-                callback(value)
-            else
-                ValueBox.Text = tostring(Settings[name])
-            end
-        end
-    end)
-    parent.CanvasSize = UDim2.new(0, 0, 0, parent.UIListLayout.AbsoluteContentSize.Y + 10)
-end
-
 -- Profile Frame
 local ProfileFrame = Instance.new("Frame")
 ProfileFrame.Size = UDim2.new(0, 140, 0, 60)
@@ -706,13 +556,11 @@ ProfileFrame.Parent = MainFrame
 local ProfileCorner = Instance.new("UICorner")
 ProfileCorner.CornerRadius = UDim.new(0, 6)
 ProfileCorner.Parent = ProfileFrame
-
 local ProfileLayout = Instance.new("UIListLayout")
 ProfileLayout.FillDirection = Enum.FillDirection.Vertical
 ProfileLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 ProfileLayout.Padding = UDim.new(0, 2)
 ProfileLayout.Parent = ProfileFrame
-
 local NameLabel = Instance.new("TextLabel")
 NameLabel.Size = UDim2.new(1, 0, 0.5, 0)
 NameLabel.BackgroundTransparency = 1
@@ -725,7 +573,6 @@ NameLabel.Parent = ProfileFrame
 local NamePadding = Instance.new("UIPadding")
 NamePadding.PaddingLeft = UDim.new(0, 5)
 NamePadding.Parent = NameLabel
-
 local UserIdLabel = Instance.new("TextLabel")
 UserIdLabel.Size = UDim2.new(1, 0, 0.5, 0)
 UserIdLabel.BackgroundTransparency = 1
@@ -742,7 +589,6 @@ UserIdPadding.Parent = UserIdLabel
 local PlayerActionFrame = nil
 local function CreatePlayerActionMenu(player)
     if PlayerActionFrame then PlayerActionFrame:Destroy() end
-
     PlayerActionFrame = Instance.new("Frame")
     PlayerActionFrame.Size = UDim2.new(0, 200, 0, 250)
     PlayerActionFrame.Position = UDim2.new(1, 10, 0, 40)
@@ -750,16 +596,13 @@ local function CreatePlayerActionMenu(player)
     PlayerActionFrame.BorderSizePixel = 0
     PlayerActionFrame.Parent = MainFrame
     PlayerActionFrame.BackgroundTransparency = 1
-
     local ActionCorner = Instance.new("UICorner")
     ActionCorner.CornerRadius = UDim.new(0, 8)
     ActionCorner.Parent = PlayerActionFrame
-
     local ActionTopBar = Instance.new("Frame")
     ActionTopBar.Size = UDim2.new(1, 0, 0, 30)
     ActionTopBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     ActionTopBar.Parent = PlayerActionFrame
-
     local ActionTitle = Instance.new("TextLabel")
     ActionTitle.Size = UDim2.new(1, 0, 0, 30)
     ActionTitle.BackgroundTransparency = 1
@@ -769,18 +612,15 @@ local function CreatePlayerActionMenu(player)
     ActionTitle.Font = Enum.Font.SourceSansBold
     ActionTitle.TextXAlignment = Enum.TextXAlignment.Center
     ActionTitle.Parent = ActionTopBar
-
     local ActionLayout = Instance.new("UIListLayout")
     ActionLayout.SortOrder = Enum.SortOrder.LayoutOrder
     ActionLayout.Padding = UDim.new(0, 8)
     ActionLayout.Parent = PlayerActionFrame
-
     local ActionPadding = Instance.new("UIPadding")
     ActionPadding.PaddingTop = UDim.new(0, 40)
     ActionPadding.PaddingLeft = UDim.new(0, 10)
     ActionPadding.PaddingRight = UDim.new(0, 10)
     ActionPadding.Parent = PlayerActionFrame
-
     local function CreateActionButton(text, callback)
         local Button = Instance.new("TextButton")
         Button.Size = UDim2.new(1, -20, 0, 35)
@@ -793,45 +633,38 @@ local function CreatePlayerActionMenu(player)
         local ButtonCorner = Instance.new("UICorner")
         ButtonCorner.CornerRadius = UDim.new(0, 6)
         ButtonCorner.Parent = Button
-
         Button.MouseEnter:Connect(function()
             TweenService:Create(Button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(70, 70, 70)}):Play()
         end)
         Button.MouseLeave:Connect(function()
             TweenService:Create(Button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}):Play()
         end)
-
         Button.MouseButton1Click:Connect(function()
             callback()
             PlayerActionFrame:Destroy()
             PlayerActionFrame = nil
         end)
     end
-
     CreateActionButton("Kick", function()
         pcall(function()
             game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents"):FindFirstChild("SayMessageRequest"):FireServer("/kick " .. player.Name, "All")
         end)
     end)
-
     CreateActionButton("Kill", function()
         if isValidCharacter(player) and isValidCharacter(LocalPlayer) then
             player.Character.Humanoid.Health = 0
         end
     end)
-
     CreateActionButton("Teleport To", function()
         if isValidCharacter(player) and isValidCharacter(LocalPlayer) then
             LocalPlayer.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame
         end
     end)
-
     CreateActionButton("Teleport To Me", function()
         if isValidCharacter(player) and isValidCharacter(LocalPlayer) then
             player.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
         end
     end)
-
     CreateActionButton("Fling", function()
         if isValidCharacter(player) and isValidCharacter(LocalPlayer) then
             local bodyVelocity = Instance.new("BodyVelocity")
@@ -841,7 +674,6 @@ local function CreatePlayerActionMenu(player)
             task.delay(0.5, function() bodyVelocity:Destroy() end)
         end
     end)
-
     CreateActionButton("Crash", function()
         pcall(function()
             for i = 1, 100 do
@@ -849,7 +681,6 @@ local function CreatePlayerActionMenu(player)
             end
         end)
     end)
-
     TweenService:Create(PlayerActionFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
     for _, child in pairs(PlayerActionFrame:GetChildren()) do
         if child:IsA("TextButton") or child:IsA("Frame") then
@@ -858,36 +689,28 @@ local function CreatePlayerActionMenu(player)
         end
     end
 end
-
 -- Player List Setup
 local playerData = {}
 local function updatePlayerEntry(playerObj, index)
     local userId = playerObj.UserId or 0
     local currentTime = tick()
-    
     if playerData[userId] and playerData[userId].frame and playerData[userId].frame.Parent then
         local data = playerData[userId]
         local frame = data.frame
-        
         local nameLabel = frame:FindFirstChild("NameLabel")
         local statusText = frame:FindFirstChild("StatusText")
         local statusDot = frame:FindFirstChild("StatusDot")
-        
         if nameLabel then nameLabel.Text = playerObj.Name end
-        
         local isAlive = playerObj.Character ~= nil
         local targetColor = isAlive and Color3.fromRGB(68, 167, 72) or Color3.fromRGB(239, 83, 80)
         local targetText = isAlive and "Online" or "Loading"
-        
         if statusDot then statusDot.BackgroundColor3 = targetColor end
         if statusText then statusText.Text = targetText end
-        
         data.playerObj = playerObj
         data.lastUpdate = currentTime
         frame.LayoutOrder = index
         return frame
     end
-    
     local entryFrame = Instance.new("Frame")
     entryFrame.Name = "Player_" .. userId
     entryFrame.Size = UDim2.new(1, 0, 0, 40)
@@ -895,11 +718,9 @@ local function updatePlayerEntry(playerObj, index)
     entryFrame.BorderSizePixel = 0
     entryFrame.LayoutOrder = index
     entryFrame.Parent = PlayerListPage
-    
     local entryCorner = Instance.new("UICorner")
     entryCorner.CornerRadius = UDim.new(0, 6)
     entryCorner.Parent = entryFrame
-
     local statusDot = Instance.new("Frame")
     statusDot.Name = "StatusDot"
     statusDot.Size = UDim2.new(0, 6, 0, 6)
@@ -907,11 +728,9 @@ local function updatePlayerEntry(playerObj, index)
     statusDot.BackgroundColor3 = playerObj.Character and Color3.fromRGB(68, 167, 72) or Color3.fromRGB(239, 83, 80)
     statusDot.BorderSizePixel = 0
     statusDot.Parent = entryFrame
-    
     local dotCorner = Instance.new("UICorner")
     dotCorner.CornerRadius = UDim.new(0, 3)
     dotCorner.Parent = statusDot
-    
     local nameLabel = Instance.new("TextButton")
     nameLabel.Name = "NameLabel"
     nameLabel.Size = UDim2.new(0, 200, 0, 18)
@@ -933,7 +752,6 @@ local function updatePlayerEntry(playerObj, index)
     nameLabel.MouseLeave:Connect(function()
         TweenService:Create(entryFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
     end)
-    
     local idLabel = Instance.new("TextLabel")
     idLabel.Name = "IdLabel"
     idLabel.Size = UDim2.new(0, 80, 0, 14)
@@ -945,7 +763,6 @@ local function updatePlayerEntry(playerObj, index)
     idLabel.Font = Enum.Font.SourceSans
     idLabel.TextXAlignment = Enum.TextXAlignment.Left
     idLabel.Parent = entryFrame
-    
     local statusTextLabel = Instance.new("TextLabel")
     statusTextLabel.Name = "StatusText"
     statusTextLabel.Size = UDim2.new(0, 60, 0, 14)
@@ -957,11 +774,9 @@ local function updatePlayerEntry(playerObj, index)
     statusTextLabel.Font = Enum.Font.SourceSans
     statusTextLabel.TextXAlignment = Enum.TextXAlignment.Right
     statusTextLabel.Parent = entryFrame
-    
     playerData[userId] = { frame = entryFrame, playerObj = playerObj, lastUpdate = currentTime }
     return entryFrame
 end
-
 local function cleanupDeadPlayers()
     local currentPlayers = {}
     for _, p in ipairs(Players:GetPlayers()) do currentPlayers[p.UserId] = true end
@@ -972,7 +787,6 @@ local function cleanupDeadPlayers()
         end
     end
 end
-
 local function updatePlayerList()
     local playerList = Players:GetPlayers()
     local total = #playerList
@@ -983,22 +797,18 @@ local function updatePlayerList()
     end
     PlayerListPage.CanvasSize = UDim2.new(0, 0, 0, math.max(0, total * 46))
 end
-
 spawn(function()
     while ScreenGui.Parent do
         if ActiveTab == "PlayerList" then updatePlayerList() end
         wait(4)
     end
 end)
-
 Players.PlayerAdded:Connect(function(newPlayer)
     if ActiveTab == "PlayerList" then updatePlayerList() end
 end)
-
 Players.PlayerRemoving:Connect(function(leavingPlayer)
     if ActiveTab == "PlayerList" then updatePlayerList() end
 end)
-
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Visible = false
 FOVCircle.Radius = Settings.FOVSize
@@ -1050,7 +860,6 @@ local function ToggleAimbot(state)
         lastTarget = nil
     end
 end
-
 local function ToggleTeamCheck(state) Toggles.TeamCheck = state end
 local function ToggleShowFOV(state) Toggles.ShowFOV = state; FOVCircle.Visible = Toggles.Aimbot and state end
 local function ToggleEnemyTPKill(state)
@@ -1082,7 +891,6 @@ local function ToggleEnemyTPKill(state)
         end
     end
 end
-
 local function ToggleSpinBot(state)
     Toggles.SpinBot = state
     if state then
@@ -1099,7 +907,6 @@ local function ToggleSpinBot(state)
         RunService:UnbindFromRenderStep("SpinBot")
     end
 end
-
 local function ToggleNoClip(state)
     Toggles.NoClip = state
     if state then
@@ -1120,7 +927,6 @@ local function ToggleNoClip(state)
         end
     end
 end
-
 local function ToggleInfJump(state)
     Toggles.InfJump = state
     if state then
@@ -1133,7 +939,6 @@ local function ToggleInfJump(state)
         table.insert(Connections, jumpConnection)
     end
 end
-
 local function ToggleSpeedHack(state)
     Toggles.SpeedHack = state
     if state then
@@ -1152,7 +957,6 @@ local function ToggleSpeedHack(state)
         end
     end
 end
-
 local function ToggleFly(state)
     Toggles.Fly = state
     if FlyBodyVelocity then FlyBodyVelocity:Destroy() end
@@ -1176,7 +980,6 @@ local function ToggleFly(state)
         table.insert(Connections, flyConnection)
     end
 end
-
 local function ToggleJumpBoost(state)
     Toggles.JumpBoost = state
     if state then
@@ -1198,7 +1001,6 @@ local function ToggleJumpBoost(state)
         end
     end
 end
-
 local function ToggleSuperJump(state)
     Toggles.SuperJump = state
     if state then
@@ -1213,7 +1015,6 @@ local function ToggleSuperJump(state)
         RunService:UnbindFromRenderStep("SuperJump")
     end
 end
-
 local function ToggleInvisible(state)
     Toggles.Invisible = state
     if LocalPlayer.Character then
@@ -1224,7 +1025,6 @@ local function ToggleInvisible(state)
         end
     end
 end
-
 local function ToggleGodMode(state)
     Toggles.GodMode = state
     if state then
@@ -1239,7 +1039,6 @@ local function ToggleGodMode(state)
         RunService:UnbindFromRenderStep("GodMode")
     end
 end
-
 local function ToggleAntiAFK(state)
     Toggles.AntiAFK = state
     if state then
@@ -1254,7 +1053,6 @@ local function ToggleAntiAFK(state)
         RunService:UnbindFromRenderStep("AntiAFK")
     end
 end
-
 local function ToggleJerk(state)
     Toggles.Jerk = state
     if state and not JerkInstance then
@@ -1270,7 +1068,6 @@ local function ToggleJerk(state)
         JerkInstance = nil
     end
 end
-
 local function ToggleBHOP(state)
     Toggles.BHOP = state
     if state then
@@ -1281,7 +1078,6 @@ local function ToggleBHOP(state)
             local humanoid = character:FindFirstChild("Humanoid")
             local rootPart = character:FindFirstChild("HumanoidRootPart")
             if not humanoid or not rootPart then return end
-
             humanoid.JumpPower = BHOP_JUMP_POWER
             if isBhopping and humanoid.FloorMaterial ~= Enum.Material.Air and tick() - lastJumpTime > JUMP_COOLDOWN then
                 humanoid.Jump = true
@@ -1298,7 +1094,6 @@ local function ToggleBHOP(state)
                     rootPart.Velocity = newVelocity
                 end
             end
-
             if humanoid.FloorMaterial == Enum.Material.Air then
                 local moveDirection = humanoid.MoveDirection
                 if moveDirection.Magnitude > 0 then
@@ -1332,7 +1127,6 @@ local function ToggleBHOP(state)
         end
     end
 end
-
 local function ToggleCameraZoom(state)
     Toggles.CameraZoom = state
     if state then
@@ -1354,7 +1148,6 @@ local function ToggleCameraZoom(state)
         Camera.FieldOfView = Settings.GameFOV
     end
 end
-
 local function CreateBoxESP(player)
     if player == LocalPlayer then return end
     local Box = Drawing.new("Square")
@@ -1383,7 +1176,6 @@ local function CreateBoxESP(player)
     DistanceLabel.Outline = true
     DistanceLabel.Color = Settings.BoxColor
     ESP[player] = {Box = Box, Tracer = Tracer, NameLabel = NameLabel, HealthLabel = HealthLabel, DistanceLabel = DistanceLabel}
-
     local espConnection = RunService:BindToRenderStep("BoxESP2D_" .. player.Name, Enum.RenderPriority.Character.Value + 1, function()
         local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
         local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
@@ -1463,7 +1255,6 @@ local function CreateBoxESP(player)
     local charAddedConn = player.CharacterAdded:Connect(function() task.wait(0.5) end)
     table.insert(Connections, charAddedConn)
 end
-
 local function RefreshESP()
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and not ESP[player] then CreateBoxESP(player) end
@@ -1482,18 +1273,48 @@ local function RefreshESP()
         esp.DistanceLabel.Visible = Toggles.DistanceESP
     end
 end
-
 local function ToggleBoxESP(state) Toggles.BoxESP = state; RefreshESP() end
 local function ToggleTracers(state) Toggles.Tracers = state; RefreshESP() end
 local function ToggleHealthESP(state) Toggles.HealthESP = state; RefreshESP() end
 local function ToggleNamesESP(state) Toggles.NamesESP = state; RefreshESP() end
 local function ToggleDistanceESP(state) Toggles.DistanceESP = state; RefreshESP() end
-
+-- Function to toggle aimbot key between LeftClick and RightClick
+local function ToggleAimKey()
+    if aimKey == Enum.UserInputType.MouseButton1 then
+        aimKey = Enum.UserInputType.MouseButton2
+        aimKeyName = "RightClick"
+    else
+        aimKey = Enum.UserInputType.MouseButton1
+        aimKeyName = "LeftClick"
+    end
+    if AimKeyButton then
+        AimKeyButton.Text = "AimKey: " .. aimKeyName
+    end
+end
+-- Create AimKey toggle button at the top of Combat page
+local AimKeyButton = Instance.new("TextButton")
+AimKeyButton.Size = UDim2.new(1, -20, 0, 35)
+AimKeyButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+AimKeyButton.Text = "AimKey: " .. aimKeyName
+AimKeyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+AimKeyButton.TextSize = 16
+AimKeyButton.Font = Enum.Font.SourceSans
+AimKeyButton.TextXAlignment = Enum.TextXAlignment.Left
+AimKeyButton.Parent = CombatPage
+AimKeyButton.LayoutOrder = -1
+local AimKeyButtonCorner = Instance.new("UICorner")
+AimKeyButtonCorner.CornerRadius = UDim.new(0, 6)
+AimKeyButtonCorner.Parent = AimKeyButton
+local AimKeyButtonPadding = Instance.new("UIPadding")
+AimKeyButtonPadding.PaddingLeft = UDim.new(0, 12)
+AimKeyButtonPadding.Parent = AimKeyButton
+AimKeyButton.MouseButton1Click:Connect(ToggleAimKey)
 -- Create Toggles and Sliders
 CreateToggle(CombatPage, "Aimbot", ToggleAimbot)
 CreateToggle(CombatPage, "TeamCheck", ToggleTeamCheck)
 CreateToggle(CombatPage, "ShowFOV", ToggleShowFOV)
 CreateToggle(CombatPage, "TriggerBot", ToggleTriggerBot)
+local EnemyTPKillToggle = CreateToggle(CombatPage, "EnemyTP-Kill", ToggleEnemyTPKill)
 CreateSlider(CombatPage, "FOVSize", 50, 500, Settings.FOVSize, function(value)
     FOVCircle.Radius = value
     Settings.FOVSize = value
@@ -1501,8 +1322,6 @@ end)
 CreateSlider(CombatPage, "AimbotDistance", 100, 5000, Settings.AimbotDistance, function(value)
     Settings.AimbotDistance = value
 end)
-local EnemyTPKillToggle = CreateToggle(CombatPage, "EnemyTP-Kill", ToggleEnemyTPKill)
-
 CreateToggle(MovementPage, "NoClip", ToggleNoClip)
 CreateToggle(MovementPage, "InfJump", ToggleInfJump)
 CreateToggle(MovementPage, "SpeedHack", ToggleSpeedHack)
@@ -1533,12 +1352,12 @@ end)
 CreateSlider(MovementPage, "BHOPSpeed", 10, 100, Settings.BHOPSpeed, function(value)
     Settings.BHOPSpeed = value
 end)
-
 CreateToggle(VisualsPage, "BoxESP", ToggleBoxESP)
 CreateToggle(VisualsPage, "Tracers", ToggleTracers)
 CreateToggle(VisualsPage, "HealthESP", ToggleHealthESP)
 CreateToggle(VisualsPage, "NamesESP", ToggleNamesESP)
 CreateToggle(VisualsPage, "DistanceESP", ToggleDistanceESP)
+CreateToggle(VisualsPage, "CameraZoom", ToggleCameraZoom)
 CreateSlider(VisualsPage, "ESPDistance", 100, 5000, Settings.ESPDistance, function(value)
     Settings.ESPDistance = value
     RefreshESP()
@@ -1547,147 +1366,193 @@ CreateSlider(VisualsPage, "BoxThickness", 1, 5, Settings.BoxThickness, function(
     Settings.BoxThickness = value
     RefreshESP()
 end)
-
+CreateSlider(VisualsPage, "GameFOV", 30, 120, Settings.GameFOV, function(value)
+    Settings.GameFOV = value
+    if not isZooming then
+        Camera.FieldOfView = value
+    end
+end)
+CreateSlider(VisualsPage, "CameraZoomScale", 10, 60, Settings.CameraZoomScale, function(value)
+    Settings.CameraZoomScale = value
+end)
 CreateToggle(MiscPage, "Invisible", ToggleInvisible)
 CreateToggle(MiscPage, "SpinBot", ToggleSpinBot)
 CreateToggle(MiscPage, "GodMode", ToggleGodMode)
 CreateToggle(MiscPage, "AntiAFK", ToggleAntiAFK)
 CreateToggle(MiscPage, "Jerk", ToggleJerk)
-CreateToggle(MiscPage, "CameraZoom", ToggleCameraZoom)
-CreateSlider(MiscPage, "SpinBotSpeed", 1, 100, Settings.SpinBotSpeed, function(value)
+CreateSlider(MiscPage, "SpinBotSpeed", 5, 50, Settings.SpinBotSpeed, function(value)
     Settings.SpinBotSpeed = value
 end)
-CreateFOVSlider(MiscPage, "GameFOV", Settings.GameFOV, function(value)
-    Settings.GameFOV = value
-    if not isZooming then Camera.FieldOfView = value end
-end)
-CreateSlider(MiscPage, "CameraZoomScale", 10, 60, Settings.CameraZoomScale, function(value)
-    Settings.CameraZoomScale = value
-end)
-
 -- Save and Load Settings
 local function SaveSettings()
-    local data = {Toggles = Toggles, Settings = Settings}
-    local json = HttpService:JSONEncode(data)
-    writefile(saveFile, json)
+    local data = {
+        Settings = Settings,
+        Toggles = Toggles,
+        AimKey = aimKeyName
+    }
+    local success, err = pcall(function()
+        writefile(saveFile, HttpService:JSONEncode(data))
+    end)
+    if not success then
+        warn("Failed to save settings: " .. tostring(err))
+    end
 end
-
 local function LoadSettings()
-    if isfile(saveFile) then
-        local json = readfile(saveFile)
-        local success, data = pcall(function() return HttpService:JSONDecode(json) end)
-        if success and data then
-            for key, value in pairs(data.Toggles or {}) do
-                if Toggles[key] ~= nil then
-                    Toggles[key] = value
-                    -- Update UI for the toggle
-                    if ToggleUIElements[key] then
-                        local ui = ToggleUIElements[key]
-                        local targetPos = value and UDim2.new(1, -21, 0, 0) or UDim2.new(0, 0, 0, 0)
-                        local targetColor = value and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
-                        TweenService:Create(ui.Knob, TweenInfo.new(0.2), {Position = targetPos}):Play()
-                        TweenService:Create(ui.Switch, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
+    local success, data = pcall(function()
+        if isfile(saveFile) then
+            return HttpService:JSONDecode(readfile(saveFile))
+        end
+        return nil
+    end)
+    if success and data then
+        for key, value in pairs(data.Settings or {}) do
+            if Settings[key] ~= nil then
+                Settings[key] = value
+                if key == "FOVSize" then
+                    FOVCircle.Radius = value
+                elseif key == "GameFOV" then
+                    if not isZooming then
+                        Camera.FieldOfView = value
                     end
-                    -- Call the corresponding toggle function
-                    if key == "Aimbot" then ToggleAimbot(value)
-                    elseif key == "TeamCheck" then ToggleTeamCheck(value)
-                    elseif key == "ShowFOV" then ToggleShowFOV(value)
-                    elseif key == "EnemyTP-Kill" then ToggleEnemyTPKill(value)
-                    elseif key == "NoClip" then ToggleNoClip(value)
-                    elseif key == "InfJump" then ToggleInfJump(value)
-                    elseif key == "SpeedHack" then ToggleSpeedHack(value)
-                    elseif key == "Fly" then ToggleFly(value)
-                    elseif key == "JumpBoost" then ToggleJumpBoost(value)
-                    elseif key == "SuperJump" then ToggleSuperJump(value)
-                    elseif key == "Invisible" then ToggleInvisible(value)
-                    elseif key == "SpinBot" then ToggleSpinBot(value)
-                    elseif key == "GodMode" then ToggleGodMode(value)
-                    elseif key == "AntiAFK" then ToggleAntiAFK(value)
-                    elseif key == "Jerk" then ToggleJerk(value)
-                    elseif key == "BHOP" then ToggleBHOP(value)
-                    elseif key == "CameraZoom" then ToggleCameraZoom(value)
-                    elseif key == "BoxESP" then ToggleBoxESP(value)
-                    elseif key == "Tracers" then ToggleTracers(value)
-                    elseif key == "HealthESP" then ToggleHealthESP(value)
-                    elseif key == "NamesESP" then ToggleNamesESP(value)
-                    elseif key == "DistanceESP" then ToggleDistanceESP(value)
-                    elseif key == "TriggerBot" then ToggleTriggerBot(value)
-                    end
+                elseif key == "SpeedScale" and Toggles.SpeedHack and LocalPlayer.Character then
+                    local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
+                    if humanoid then humanoid.WalkSpeed = value end
+                elseif key == "JumpBoostScale" and Toggles.JumpBoost and LocalPlayer.Character then
+                    local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
+                    if humanoid then humanoid.JumpPower = value end
                 end
             end
-            for key, value in pairs(data.Settings or {}) do
-                if Settings[key] ~= nil then
-                    Settings[key] = value
+        end
+        for key, value in pairs(data.Toggles or {}) do
+            if Toggles[key] ~= nil and ToggleUIElements[key] then
+                Toggles[key] = value
+                local toggleFunc = ({
+                    BoxESP = ToggleBoxESP,
+                    Tracers = ToggleTracers,
+                    HealthESP = ToggleHealthESP,
+                    NamesESP = ToggleNamesESP,
+                    DistanceESP = ToggleDistanceESP,
+                    Aimbot = ToggleAimbot,
+                    TeamCheck = ToggleTeamCheck,
+                    ShowFOV = ToggleShowFOV,
+                    ["EnemyTP-Kill"] = ToggleEnemyTPKill,
+                    NoClip = ToggleNoClip,
+                    InfJump = ToggleInfJump,
+                    SpeedHack = ToggleSpeedHack,
+                    Fly = ToggleFly,
+                    JumpBoost = ToggleJumpBoost,
+                    SuperJump = ToggleSuperJump,
+                    Invisible = ToggleInvisible,
+                    SpinBot = ToggleSpinBot,
+                    GodMode = ToggleGodMode,
+                    AntiAFK = ToggleAntiAFK,
+                    Jerk = ToggleJerk,
+                    BHOP = ToggleBHOP,
+                    CameraZoom = ToggleCameraZoom,
+                    TriggerBot = ToggleTriggerBot
+                })[key]
+                if toggleFunc then
+                    toggleFunc(value)
                 end
+                local ui = ToggleUIElements[key]
+                if ui then
+                    local targetPos = value and UDim2.new(1, -21, 0, 0) or UDim2.new(0, 0, 0, 0)
+                    local targetColor = value and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
+                    TweenService:Create(ui.Knob, TweenInfo.new(0.2), {Position = targetPos}):Play()
+                    TweenService:Create(ui.Switch, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
+                end
+            end
+        end
+        if data.AimKey then
+            aimKeyName = data.AimKey
+            aimKey = aimKeyName == "LeftClick" and Enum.UserInputType.MouseButton1 or Enum.UserInputType.MouseButton2
+            if AimKeyButton then
+-- [Previous script content up to AimKeyButton.Text =]
+AimKeyButton.Text = "AimKey: " .. aimKeyName
             end
         end
     end
 end
-
-local function UnsaveSettings()
+SaveButton.MouseButton1Click:Connect(SaveSettings)
+UnsaveButton.MouseButton1Click:Connect(function()
     if isfile(saveFile) then
         delfile(saveFile)
-        for key, _ in pairs(Toggles) do
-            Toggles[key] = DefaultToggles[key]
-            if ToggleUIElements[key] then
+        -- Reset to default settings
+        Settings = table.clone(DefaultSettings)
+        for key, value in pairs(DefaultToggles) do
+            if Toggles[key] ~= nil then
+                Toggles[key] = value
+                local toggleFunc = ({
+                    BoxESP = ToggleBoxESP,
+                    Tracers = ToggleTracers,
+                    HealthESP = ToggleHealthESP,
+                    NamesESP = ToggleNamesESP,
+                    DistanceESP = ToggleDistanceESP,
+                    Aimbot = ToggleAimbot,
+                    TeamCheck = ToggleTeamCheck,
+                    ShowFOV = ToggleShowFOV,
+                    ["EnemyTP-Kill"] = ToggleEnemyTPKill,
+                    NoClip = ToggleNoClip,
+                    InfJump = ToggleInfJump,
+                    SpeedHack = ToggleSpeedHack,
+                    Fly = ToggleFly,
+                    JumpBoost = ToggleJumpBoost,
+                    SuperJump = ToggleSuperJump,
+                    Invisible = ToggleInvisible,
+                    SpinBot = ToggleSpinBot,
+                    GodMode = ToggleGodMode,
+                    AntiAFK = ToggleAntiAFK,
+                    Jerk = ToggleJerk,
+                    BHOP = ToggleBHOP,
+                    CameraZoom = ToggleCameraZoom,
+                    TriggerBot = ToggleTriggerBot
+                })[key]
+                if toggleFunc then
+                    toggleFunc(value)
+                end
+                -- Update UI for toggles
                 local ui = ToggleUIElements[key]
-                local targetPos = UDim2.new(0, 0, 0, 0)
-                local targetColor = Color3.fromRGB(60, 60, 60)
-                TweenService:Create(ui.Knob, TweenInfo.new(0.2), {Position = targetPos}):Play()
-                TweenService:Create(ui.Switch, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
+                if ui then
+                    local targetPos = value and UDim2.new(1, -21, 0, 0) or UDim2.new(0, 0, 0, 0)
+                    local targetColor = value and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
+                    TweenService:Create(ui.Knob, TweenInfo.new(0.2), {Position = targetPos}):Play()
+                    TweenService:Create(ui.Switch, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
+                end
             end
         end
-        for key, value in pairs(DefaultSettings) do
-            Settings[key] = value
+        -- Reset aim key
+        aimKey = Enum.UserInputType.MouseButton1
+        aimKeyName = "LeftClick"
+        if AimKeyButton then
+            AimKeyButton.Text = "AimKey: " .. aimKeyName
         end
-        for _, toggle in pairs({
-            {name = "Aimbot", func = ToggleAimbot},
-            {name = "TeamCheck", func = ToggleTeamCheck},
-            {name = "ShowFOV", func = ToggleShowFOV},
-            {name = "EnemyTP-Kill", func = ToggleEnemyTPKill},
-            {name = "NoClip", func = ToggleNoClip},
-            {name = "InfJump", func = ToggleInfJump},
-            {name = "SpeedHack", func = ToggleSpeedHack},
-            {name = "Fly", func = ToggleFly},
-            {name = "JumpBoost", func = ToggleJumpBoost},
-            {name = "SuperJump", func = ToggleSuperJump},
-            {name = "Invisible", func = ToggleInvisible},
-            {name = "SpinBot", func = ToggleSpinBot},
-            {name = "GodMode", func = ToggleGodMode},
-            {name = "AntiAFK", func = ToggleAntiAFK},
-            {name = "Jerk", func = ToggleJerk},
-            {name = "BHOP", func = ToggleBHOP},
-            {name = "CameraZoom", func = ToggleCameraZoom},
-            {name = "BoxESP", func = ToggleBoxESP},
-            {name = "Tracers", func = ToggleTracers},
-            {name = "HealthESP", func = ToggleHealthESP},
-            {name = "NamesESP", func = ToggleNamesESP},
-            {name = "DistanceESP", func = ToggleDistanceESP},
-            {name = "TriggerBot", func = ToggleTriggerBot}
-        }) do
-            toggle.func(Toggles[toggle.name])
+        -- Reset sliders
+        FOVCircle.Radius = Settings.FOVSize
+        if not isZooming then
+            Camera.FieldOfView = Settings.GameFOV
         end
+        if Toggles.SpeedHack and LocalPlayer.Character then
+            local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
+            if humanoid then humanoid.WalkSpeed = Settings.SpeedScale end
+        end
+        if Toggles.JumpBoost and LocalPlayer.Character then
+            local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
+            if humanoid then humanoid.JumpPower = Settings.JumpBoostScale end
+        end
+        RefreshESP()
     end
-end
-
-SaveButton.MouseButton1Click:Connect(SaveSettings)
-UnsaveButton.MouseButton1Click:Connect(UnsaveSettings)
-
+end)
 -- Initialize ESP for existing players
 for _, player in pairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
         CreateBoxESP(player)
     end
 end
-
--- Handle new players
 Players.PlayerAdded:Connect(function(player)
     if player ~= LocalPlayer then
         CreateBoxESP(player)
     end
 end)
-
--- Handle player leaving
 Players.PlayerRemoving:Connect(function(player)
     if ESP[player] then
         for _, obj in pairs(ESP[player]) do
@@ -1696,11 +1561,36 @@ Players.PlayerRemoving:Connect(function(player)
         ESP[player] = nil
     end
 end)
-
 -- Load settings on startup
 LoadSettings()
-
--- Update Canvas Sizes
+-- Update CanvasSize for all pages
 for _, page in pairs(Pages) do
     page.CanvasSize = UDim2.new(0, 0, 0, page.UIListLayout.AbsoluteContentSize.Y + 10)
 end
+-- Handle character respawn
+LocalPlayer.CharacterAdded:Connect(function(character)
+    task.wait(0.5)
+    if Toggles.NoClip then ToggleNoClip(true) end
+    if Toggles.SpeedHack then ToggleSpeedHack(true) end
+    if Toggles.JumpBoost then ToggleJumpBoost(true) end
+    if Toggles.Invisible then ToggleInvisible(true) end
+    if Toggles.Fly then ToggleFly(true) end
+    if Toggles.BHOP then ToggleBHOP(true) end
+end)
+-- Update FOV circle position
+RunService:BindToRenderStep("UpdateFOV", Enum.RenderPriority.Camera.Value, function()
+    if Toggles.ShowFOV and Toggles.Aimbot then
+        FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    end
+end)
+-- Keybind to toggle GUI visibility
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.RightShift then
+        MainFrame.Visible = not MainFrame.Visible
+        if MainFrame.Visible then
+            TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 700, 0, 450), BackgroundTransparency = 0}):Play()
+        else
+            TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1}):Play()
+        end
+    end
+end)
