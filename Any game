@@ -474,7 +474,6 @@ local MovementPage = CreateTab("Movement")
 local VisualsPage = CreateTab("Visuals")
 local MiscPage = CreateTab("Misc")
 local PlayerListPage = CreateTab("PlayerList")
-local RivalsPage = CreateTab("Rivals")
 -- UI Components
 local function CreateToggle(parent, name, callback)
     local ToggleFrame = Instance.new("Frame")
@@ -1325,7 +1324,7 @@ local function ToggleTeleportBehind(state)
             if not gameProcessed and input.KeyCode == tpKey then
                 doTeleportBehind()
                 Toggles.TeleportBehind = false
-                local toggleFrame = RivalsPage:FindFirstChildWhichIsA("Frame", true)
+                local toggleFrame = MiscPage:FindFirstChildWhichIsA("Frame", true)
                 if toggleFrame then
                     local switch = toggleFrame:FindFirstChildWhichIsA("TextButton", true)
                     local knob = switch and switch:FindFirstChildWhichIsA("Frame", true)
@@ -1489,11 +1488,11 @@ AimKeyToggle.MouseButton1Click:Connect(function()
     AimKeyToggle.Text = aimKeyName
 end)
 CombatPage.CanvasSize = UDim2.new(0, 0, 0, CombatPage.UIListLayout.AbsoluteContentSize.Y + 10)
--- Teleport Key Toggle
+-- Teleport Key Toggle (MOVED TO MISC PAGE)
 local TpKeyFrame = Instance.new("Frame")
 TpKeyFrame.Size = UDim2.new(1, -20, 0, 35)
 TpKeyFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-TpKeyFrame.Parent = RivalsPage
+TpKeyFrame.Parent = MiscPage
 local TpKeyCorner = Instance.new("UICorner")
 TpKeyCorner.CornerRadius = UDim.new(0, 6)
 TpKeyCorner.Parent = TpKeyFrame
@@ -1537,7 +1536,7 @@ TpKeyToggle.MouseButton1Click:Connect(function()
         end
     end)
 end)
-RivalsPage.CanvasSize = UDim2.new(0, 0, 0, RivalsPage.UIListLayout.AbsoluteContentSize.Y + 10)
+MiscPage.CanvasSize = UDim2.new(0, 0, 0, MiscPage.UIListLayout.AbsoluteContentSize.Y + 10)
 -- Create Toggles and Sliders
 CreateToggle(CombatPage, "Aimbot", ToggleAimbot)
 CreateToggle(CombatPage, "Team Check", ToggleTeamCheck)
@@ -1589,19 +1588,21 @@ CreateToggle(VisualsPage, "Distance ESP", ToggleDistanceESP)
 CreateSlider(VisualsPage, "ESPDistance", 100, 5000, Settings.ESPDistance, function(value)
     Settings.ESPDistance = value
 end)
+-- GameFOV MOVED TO VISUALS PAGE
+CreateFOVSlider(VisualsPage, "GameFOV", Settings.GameFOV, function(value)
+    Settings.GameFOV = value
+    Camera.FieldOfView = value
+end)
 CreateToggle(MiscPage, "Invisible", ToggleInvisible)
 CreateToggle(MiscPage, "SpinBot", ToggleSpinBot)
 CreateToggle(MiscPage, "God Mode", ToggleGodMode)
 CreateToggle(MiscPage, "Anti-AFK", ToggleAntiAFK)
 CreateToggle(MiscPage, "Jerk", ToggleJerk)
+-- Teleport Behind MOVED TO MISC PAGE
+CreateToggle(MiscPage, "Teleport Behind", ToggleTeleportBehind)
 CreateSlider(MiscPage, "SpinBotSpeed", 100, 2000, Settings.SpinBotSpeed, function(value)
     Settings.SpinBotSpeed = value
 end)
-CreateFOVSlider(MiscPage, "GameFOV", Settings.GameFOV, function(value)
-    Settings.GameFOV = value
-    Camera.FieldOfView = value
-end)
-CreateToggle(RivalsPage, "Teleport Behind", ToggleTeleportBehind)
 -- Apply loaded toggles
 local Callbacks = {
     NoClip = ToggleNoClip,
