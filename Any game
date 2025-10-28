@@ -34,12 +34,17 @@ local Settings = {
     FlySpeed = 50,
     ESPDistance = 500,
     TeleportRange = 150,
-    GameFOV = 70
+    GameFOV = 70,
+    AimbotSmoothness = 1.0,
+    AimbotMaxMouseDelta = 20,
+    AimbotMaxTargetVelocity = 80,
+    AimbotTargetStickTime = 0.4
 }
 local Toggles = {
     NoClip = false,
     InfJump = false,
     Aimbot = false,
+    AimHelper = false,
     TeamCheck = false,
     BoxESP = false,
     Tracers = false,
@@ -60,23 +65,18 @@ local Toggles = {
     BHOP = false,
     TriggerBot = false,
     TeleportBehind = false,
-    RivalsAimBot = false
+    WallCheck = false
 }
 local originalCollides = {}
 local originalTrans = {}
--- RivalsAimbot Settings (integrated)
-local RivalsAimbot = {
-    Enabled = false,
+-- Aimbot Settings (integrated from RivalsAimbot)
+local AimbotSettings = {
     WallCheckEnabled = false,
     FOV = 200.0,
     Range = 340.0,
-    Smoothness = 1.0,
     TargetPart = "Head",
-    MaxMouseDelta = 20,
-    MaxTargetVelocity = 80,
     CurrentTarget = nil,
-    LastTargetSwitch = 0,
-    TargetStickTime = 0.4
+    LastTargetSwitch = 0
 }
 -- Load saved toggles and settings if exists
 local saveFile = "saved_toggles.json"
@@ -92,9 +92,13 @@ if isfile(saveFile) then
     end
 end
 Camera.FieldOfView = Settings.GameFOV
--- Sync RivalsAimbot FOV and Range with existing settings
-RivalsAimbot.FOV = Settings.FOVSize
-RivalsAimbot.Range = Settings.AimbotDistance
+-- Sync AimbotSettings FOV and Range with existing settings
+AimbotSettings.FOV = Settings.FOVSize
+AimbotSettings.Range = Settings.AimbotDistance
+AimbotSettings.Smoothness = Settings.AimbotSmoothness
+AimbotSettings.MaxMouseDelta = Settings.AimbotMaxMouseDelta
+AimbotSettings.MaxTargetVelocity = Settings.AimbotMaxTargetVelocity
+AimbotSettings.TargetStickTime = Settings.AimbotTargetStickTime
 -- TriggerBot
 _G.triggerbot = false
 local Clicked = false
@@ -409,7 +413,7 @@ CloseButton.MouseButton1Click:Connect(function()
     for _, conn in pairs(Connections) do
         pcall(function() conn:Disconnect() end)
     end
-    RunService:UnbindFromRenderStep("RivalsAimBot")
+    RunService:UnbindFromRenderStep("Aimbot")
     if fovUpdateConnection then fovUpdateConnection:Disconnect() end
     if FlyBodyVelocity then FlyBodyVelocity:Destroy() end
     if FOVCircle then FOVCircle:Remove() end
@@ -493,8 +497,34 @@ local CombatPage = CreateTab("Combat")
 local MovementPage = CreateTab("Movement")
 local VisualsPage = CreateTab("Visuals")
 local MiscPage = CreateTab("Misc")
-local PlayerListPage = CreateTab("PlayerList")
+local PlayerListPage = CreateTab("Players")
 -- UI Components
+local function CreateHeader(parent, text)
+    local HeaderFrame = Instance.new("Frame")
+    HeaderFrame.Size = UDim2.new(1, -20, 0, 30)
+    HeaderFrame.BackgroundTransparency = 1
+    HeaderFrame.Parent = parent
+    local HeaderLabel = Instance.new("TextLabel")
+    HeaderLabel.Size = UDim2.new(1, 0, 1, 0)
+    HeaderLabel.BackgroundTransparency = 1
+    HeaderLabel.Text = text
+    HeaderLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+    HeaderLabel.TextSize = 16
+    HeaderLabel.Font = Enum.Font.SourceSansBold
+    HeaderLabel.TextXAlignment = Enum.TextXAlignment.Left
+    HeaderLabel.Parent = HeaderFrame
+    local HeaderPadding = Instance.new("UIPadding")
+    HeaderPadding.PaddingLeft = UDim.new(0, 12)
+    HeaderPadding.Parent = HeaderLabel
+    local Separator = Instance.new("Frame")
+    Separator.Size = UDim2.new(1, 0, 0, 1)
+    Separator.Position = UDim2.new(0, 0, 1, 0)
+    Separator.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    Separator.BorderSizePixel = 0
+    Separator.Parent = HeaderFrame
+    parent.CanvasSize = UDim2.new(0, 0, 0, parent.UIListLayout.AbsoluteContentSize.Y + 10)
+    return HeaderFrame
+end
 local function CreateToggle(parent, name, callback)
     local ToggleFrame = Instance.new("Frame")
     ToggleFrame.Size = UDim2.new(1, -20, 0, 35)
@@ -972,15 +1002,15 @@ local function updatePlayerList()
 end
 spawn(function()
     while ScreenGui.Parent do
-        if ActiveTab == "PlayerList" then updatePlayerList() end
+        if ActiveTab == "Players" then updatePlayerList() end
         wait(4)
     end
 end)
 Players.PlayerAdded:Connect(function(newPlayer)
-    if ActiveTab == "PlayerList" then updatePlayerList() end
+    if ActiveTab == "Players" then updatePlayerList() end
 end)
 Players.PlayerRemoving:Connect(function(leavingPlayer)
-    if ActiveTab == "PlayerList" then updatePlayerList() end
+    if ActiveTab == "Players" then updatePlayerList() end
 end)
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Visible = false
@@ -997,8 +1027,8 @@ local fovUpdateConnection = RunService.Heartbeat:Connect(function()
 end)
 Camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateFOVCircle)
 updateFOVCircle()
--- RivalsAimbot Logic
-local function GetClosestPlayerRivals()
+-- Integrated Aimbot Logic (original snap + Rivals smooth)
+local function GetClosestPlayerAimbot()
     local closestPlayer = nil
     local closestStudDistance = math.huge
     local viewportSize = Camera and Camera.ViewportSize
@@ -1008,24 +1038,24 @@ local function GetClosestPlayerRivals()
     if not localPos then return nil end
     local currentTime = tick()
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild(RivalsAimbot.TargetPart) then
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild(AimbotSettings.TargetPart) then
             local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
             if humanoid and humanoid.Health > 0 then
                 local isEnemy = not Toggles.TeamCheck or not hasTeams() or player.Team ~= LocalPlayer.Team
                 if isEnemy then
-                    local targetPart = player.Character[RivalsAimbot.TargetPart]
+                    local targetPart = player.Character[AimbotSettings.TargetPart]
                     local targetPos = targetPart.Position
                     local velocity = targetPart and targetPart.Velocity.Magnitude or 0
-                    if velocity <= RivalsAimbot.MaxTargetVelocity then
+                    if velocity <= Settings.AimbotMaxTargetVelocity then
                         local screenPos, onScreen = Camera:WorldToViewportPoint(targetPos)
                         if onScreen then
                             local screenDistance = (Vector2.new(screenPos.X, screenPos.Y) - centerPos).Magnitude
-                            if screenDistance <= RivalsAimbot.FOV then
+                            if screenDistance <= AimbotSettings.FOV then
                                 local studDistance = (targetPos - localPos).Magnitude
-                                if studDistance <= RivalsAimbot.Range then
-                                    local switchAllowed = RivalsAimbot.CurrentTarget == nil or (currentTime - RivalsAimbot.LastTargetSwitch > RivalsAimbot.TargetStickTime)
+                                if studDistance <= AimbotSettings.Range then
+                                    local switchAllowed = AimbotSettings.CurrentTarget == nil or (currentTime - AimbotSettings.LastTargetSwitch > Settings.AimbotTargetStickTime)
                                     if switchAllowed or studDistance < closestStudDistance * 0.98 then
-                                        if RivalsAimbot.WallCheckEnabled then
+                                        if AimbotSettings.WallCheckEnabled then
                                             local ray = Ray.new(localPos, (targetPos - localPos).Unit * studDistance)
                                             local hit, hitPos = workspace:FindPartOnRayWithIgnoreList(ray, {LocalPlayer.Character, player.Character})
                                             if not hit or hit:IsDescendantOf(player.Character) then
@@ -1045,24 +1075,40 @@ local function GetClosestPlayerRivals()
             end
         end
     end
-    if closestPlayer and closestPlayer ~= RivalsAimbot.CurrentTarget then
-        RivalsAimbot.CurrentTarget = closestPlayer
-        RivalsAimbot.LastTargetSwitch = tick()
+    if closestPlayer and closestPlayer ~= AimbotSettings.CurrentTarget then
+        AimbotSettings.CurrentTarget = closestPlayer
+        AimbotSettings.LastTargetSwitch = tick()
     end
-    return RivalsAimbot.CurrentTarget
+    return AimbotSettings.CurrentTarget
 end
-local function ToggleRivalsAimBot(state)
-    Toggles.RivalsAimBot = state
-    RivalsAimbot.Enabled = state
-    FOVCircle.Visible = (Toggles.Aimbot or Toggles.RivalsAimBot) and Toggles.ShowFOV
+local function ToggleWallCheck(state)
+    AimbotSettings.WallCheckEnabled = state
+    Toggles.WallCheck = state
+end
+local function ToggleAimHelper(state)
+    Toggles.AimHelper = state
+end
+local function ToggleAimbot(state)
+    Toggles.Aimbot = state
+    FOVCircle.Visible = state and Toggles.ShowFOV
     updateFOVCircle()
     if state then
-        local rivalsAimbotConnection = RunService:BindToRenderStep("RivalsAimBot", Enum.RenderPriority.Camera.Value + 1, function(delta)
-            if RivalsAimbot.Enabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
-                local target = GetClosestPlayerRivals()
-                if target and target.Character and target.Character:FindFirstChild(RivalsAimbot.TargetPart) then
-                    local targetPart = target.Character[RivalsAimbot.TargetPart]
-                    local targetPos = targetPart.Position
+        local aimbotConnection = RunService:BindToRenderStep("Aimbot", Enum.RenderPriority.Camera.Value + 1, function(delta)
+            if not Toggles.Aimbot or not UserInputService:IsMouseButtonPressed(aimKey) then
+                AimbotSettings.CurrentTarget = nil
+                return
+            end
+            if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                AimbotSettings.CurrentTarget = nil
+                return
+            end
+            local myPos = LocalPlayer.Character.HumanoidRootPart.Position
+            local target = GetClosestPlayerAimbot()
+            if target and target.Character and target.Character:FindFirstChild(AimbotSettings.TargetPart) then
+                local targetPart = target.Character[AimbotSettings.TargetPart]
+                local targetPos = targetPart.Position
+                if Toggles.AimHelper then
+                    -- Smooth mouse movement (Rivals style)
                     local screenPos, onScreen = Camera:WorldToViewportPoint(targetPos)
                     if onScreen and not (screenPos.X ~= screenPos.X or screenPos.Y ~= screenPos.Y) then
                         local mousePos = UserInputService:GetMouseLocation()
@@ -1070,99 +1116,46 @@ local function ToggleRivalsAimBot(state)
                         local deltaLength = deltaPos.Magnitude
 
                         if deltaLength > 0 then
-                            if deltaLength > RivalsAimbot.MaxMouseDelta then
-                                deltaPos = deltaPos.Unit * RivalsAimbot.MaxMouseDelta
+                            if deltaLength > Settings.AimbotMaxMouseDelta then
+                                deltaPos = deltaPos.Unit * Settings.AimbotMaxMouseDelta
                             end
                             local verticalDelta = deltaPos.Y
                             if verticalDelta > 0 then
-                                deltaPos = Vector2.new(deltaPos.X, math.min(verticalDelta, RivalsAimbot.MaxMouseDelta * 0.5))
+                                deltaPos = Vector2.new(deltaPos.X, math.min(verticalDelta, Settings.AimbotMaxMouseDelta * 0.5))
                             end
 
-                            local smoothFactor = 1 / RivalsAimbot.Smoothness
+                            local smoothFactor = 1 / Settings.AimbotSmoothness
                             local moveAmount = deltaPos * smoothFactor * delta * 30
                             local moveX, moveY = moveAmount.X, moveAmount.Y
 
-                            if moveX == moveX and moveY == moveY and math.abs(moveX) < RivalsAimbot.MaxMouseDelta and math.abs(moveY) < RivalsAimbot.MaxMouseDelta then
+                            if moveX == moveX and moveY == moveY and math.abs(moveX) < Settings.AimbotMaxMouseDelta and math.abs(moveY) < Settings.AimbotMaxMouseDelta then
                                 mousemoverel(moveX, moveY)
                             end
                         end
-                        RivalsAimbot.CurrentTarget = target
+                        AimbotSettings.CurrentTarget = target
+                    end
+                else
+                    -- Original camera snap
+                    local screenPos, onScreen = Camera:WorldToViewportPoint(targetPos)
+                    if onScreen then
+                        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+                        AimbotSettings.CurrentTarget = target
                     end
                 end
             else
-                RivalsAimbot.CurrentTarget = nil
-            end
-        end)
-        table.insert(Connections, rivalsAimbotConnection)
-    else
-        RunService:UnbindFromRenderStep("RivalsAimBot")
-        FOVCircle.Visible = (Toggles.Aimbot or Toggles.RivalsAimBot) and Toggles.ShowFOV
-        updateFOVCircle()
-        RivalsAimbot.CurrentTarget = nil
-    end
-end
-local function ToggleWallCheck(state)
-    RivalsAimbot.WallCheckEnabled = state
-end
-local function ToggleAimbot(state)
-    Toggles.Aimbot = state
-    FOVCircle.Visible = (Toggles.Aimbot or Toggles.RivalsAimBot) and Toggles.ShowFOV
-    updateFOVCircle()
-    if state then
-        local aimbotConnection = RunService:BindToRenderStep("Aimbot", Enum.RenderPriority.Camera.Value + 1, function()
-            if not Toggles.Aimbot or not UserInputService:IsMouseButtonPressed(aimKey) then
-                lastTarget = nil
-                return
-            end
-            if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                lastTarget = nil
-                return
-            end
-            local myPos = LocalPlayer.Character.HumanoidRootPart.Position
-            local closest, closestDist = nil, Settings.FOVSize
-            for _, player in pairs(Players:GetPlayers()) do
-                if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-                    local isEnemy = not Toggles.TeamCheck or not hasTeams() or player.Team ~= LocalPlayer.Team
-                    if isEnemy then
-                        local targetPos3D = player.Character.Head.Position
-                        local dist3D = (myPos - targetPos3D).Magnitude
-                        local screenPos, onScreen = Camera:WorldToViewportPoint(targetPos3D)
-                        if onScreen and dist3D <= Settings.AimbotDistance then
-                            local passesWallCheck = true
-                            if RivalsAimbot.WallCheckEnabled then
-                                local direction = (targetPos3D - myPos).Unit
-                                local ray = Ray.new(myPos, direction * dist3D)
-                                local hit = workspace:FindPartOnRayWithIgnoreList(ray, {LocalPlayer.Character, player.Character})
-                                passesWallCheck = hit == nil or hit:IsDescendantOf(player.Character)
-                            end
-                            if passesWallCheck then
-                                local dist2D = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
-                                if dist2D < closestDist then
-                                    closest = player.Character.Head
-                                    closestDist = dist2D
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-            if closest then
-                lastTarget = closest
-                Camera.CFrame = CFrame.new(Camera.CFrame.Position, closest.Position)
-            else
-                lastTarget = nil
+                AimbotSettings.CurrentTarget = nil
             end
         end)
         table.insert(Connections, aimbotConnection)
     else
         RunService:UnbindFromRenderStep("Aimbot")
-        FOVCircle.Visible = (Toggles.Aimbot or Toggles.RivalsAimBot) and Toggles.ShowFOV
+        FOVCircle.Visible = Toggles.Aimbot and Toggles.ShowFOV
         updateFOVCircle()
-        lastTarget = nil
+        AimbotSettings.CurrentTarget = nil
     end
 end
 local function ToggleTeamCheck(state) Toggles.TeamCheck = state end
-local function ToggleShowFOV(state) Toggles.ShowFOV = state; FOVCircle.Visible = (Toggles.Aimbot or Toggles.RivalsAimBot) and state; updateFOVCircle() end
+local function ToggleShowFOV(state) Toggles.ShowFOV = state; FOVCircle.Visible = Toggles.Aimbot and state; updateFOVCircle() end
 local function ToggleEnemyTPKill(state)
     Toggles['EnemyTP-Kill'] = state
     if state then
@@ -1598,169 +1591,150 @@ local function ToggleTracers(state) Toggles.Tracers = state; RefreshESP() end
 local function ToggleHealthESP(state) Toggles.HealthESP = state; RefreshESP() end
 local function ToggleNamesESP(state) Toggles.NamesESP = state; RefreshESP() end
 local function ToggleDistanceESP(state) Toggles.DistanceESP = state; RefreshESP() end
--- Aimbot Key Toggle
-local AimKeyFrame = Instance.new("Frame")
-AimKeyFrame.Size = UDim2.new(1, -20, 0, 35)
-AimKeyFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-AimKeyFrame.Parent = CombatPage
-local AimKeyCorner = Instance.new("UICorner")
-AimKeyCorner.CornerRadius = UDim.new(0, 6)
-AimKeyCorner.Parent = AimKeyFrame
-local AimKeyLabel = Instance.new("TextLabel")
-AimKeyLabel.Size = UDim2.new(0.5, 0, 1, 0)
-AimKeyLabel.BackgroundTransparency = 1
-AimKeyLabel.Text = "Aimbot Key:"
-AimKeyLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-AimKeyLabel.TextSize = 16
-AimKeyLabel.Font = Enum.Font.SourceSans
-AimKeyLabel.TextXAlignment = Enum.TextXAlignment.Left
-AimKeyLabel.Parent = AimKeyFrame
-local AimKeyLabelPadding = Instance.new("UIPadding")
-AimKeyLabelPadding.PaddingLeft = UDim.new(0, 12)
-AimKeyLabelPadding.Parent = AimKeyLabel
-local AimKeyToggle = Instance.new("TextButton")
-AimKeyToggle.Size = UDim2.new(0.4, 0, 0.8, 0)
-AimKeyToggle.Position = UDim2.new(0.55, 0, 0.1, 0)
-AimKeyToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-AimKeyToggle.Text = aimKeyName
-AimKeyToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-AimKeyToggle.TextSize = 16
-AimKeyToggle.Font = Enum.Font.SourceSans
-AimKeyToggle.Parent = AimKeyFrame
-local AimKeyToggleCorner = Instance.new("UICorner")
-AimKeyToggleCorner.CornerRadius = UDim.new(0, 6)
-AimKeyToggleCorner.Parent = AimKeyToggle
-AimKeyToggle.MouseButton1Click:Connect(function()
-    aimKey = (aimKey == Enum.UserInputType.MouseButton1) and Enum.UserInputType.MouseButton2 or Enum.UserInputType.MouseButton1
-    aimKeyName = getInputName(aimKey)
-    AimKeyToggle.Text = aimKeyName
-end)
-CombatPage.CanvasSize = UDim2.new(0, 0, 0, CombatPage.UIListLayout.AbsoluteContentSize.Y + 10)
--- Teleport Key Toggle (MOVED TO MISC PAGE)
-local TpKeyFrame = Instance.new("Frame")
-TpKeyFrame.Size = UDim2.new(1, -20, 0, 35)
-TpKeyFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-TpKeyFrame.Parent = MiscPage
-local TpKeyCorner = Instance.new("UICorner")
-TpKeyCorner.CornerRadius = UDim.new(0, 6)
-TpKeyCorner.Parent = TpKeyFrame
-local TpKeyLabel = Instance.new("TextLabel")
-TpKeyLabel.Size = UDim2.new(0.5, 0, 1, 0)
-TpKeyLabel.BackgroundTransparency = 1
-TpKeyLabel.Text = "Teleport Behind Key:"
-TpKeyLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TpKeyLabel.TextSize = 16
-TpKeyLabel.Font = Enum.Font.SourceSans
-TpKeyLabel.TextXAlignment = Enum.TextXAlignment.Left
-TpKeyLabel.Parent = TpKeyFrame
-local TpKeyLabelPadding = Instance.new("UIPadding")
-TpKeyLabelPadding.PaddingLeft = UDim.new(0, 12)
-TpKeyLabelPadding.Parent = TpKeyLabel
-local TpKeyToggle = Instance.new("TextButton")
-TpKeyToggle.Size = UDim2.new(0.4, 0, 0.8, 0)
-TpKeyToggle.Position = UDim2.new(0.55, 0, 0.1, 0)
-TpKeyToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-TpKeyToggle.Text = tpKeyName
-TpKeyToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-TpKeyToggle.TextSize = 16
-TpKeyToggle.Font = Enum.Font.SourceSans
-TpKeyToggle.Parent = TpKeyFrame
-local TpKeyToggleCorner = Instance.new("UICorner")
-TpKeyToggleCorner.CornerRadius = UDim.new(0, 6)
-TpKeyToggleCorner.Parent = TpKeyToggle
-TpKeyToggle.MouseButton1Click:Connect(function()
-    local listening = true
-    TpKeyToggle.Text = "Press a key..."
-    local inputConnection
-    inputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if listening and not gameProcessed then
-            if input.UserInputType == Enum.UserInputType.Keyboard then
-                tpKey = input.KeyCode
-                tpKeyName = getInputName(input.KeyCode)
-                TpKeyToggle.Text = tpKeyName
-                listening = false
-                inputConnection:Disconnect()
-            end
-        end
-    end)
-end)
-MiscPage.CanvasSize = UDim2.new(0, 0, 0, MiscPage.UIListLayout.AbsoluteContentSize.Y + 10)
--- Create Toggles and Sliders
+-- Aimbot Key Toggle Frame
+local function CreateKeyFrame(parent, labelText, currentKey, keyName, onClick)
+    local KeyFrame = Instance.new("Frame")
+    KeyFrame.Size = UDim2.new(1, -20, 0, 35)
+    KeyFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    KeyFrame.Parent = parent
+    local KeyCorner = Instance.new("UICorner")
+    KeyCorner.CornerRadius = UDim.new(0, 6)
+    KeyCorner.Parent = KeyFrame
+    local KeyLabel = Instance.new("TextLabel")
+    KeyLabel.Size = UDim2.new(0.5, 0, 1, 0)
+    KeyLabel.BackgroundTransparency = 1
+    KeyLabel.Text = labelText
+    KeyLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    KeyLabel.TextSize = 16
+    KeyLabel.Font = Enum.Font.SourceSans
+    KeyLabel.TextXAlignment = Enum.TextXAlignment.Left
+    KeyLabel.Parent = KeyFrame
+    local KeyLabelPadding = Instance.new("UIPadding")
+    KeyLabelPadding.PaddingLeft = UDim.new(0, 12)
+    KeyLabelPadding.Parent = KeyLabel
+    local KeyToggle = Instance.new("TextButton")
+    KeyToggle.Size = UDim2.new(0.4, 0, 0.8, 0)
+    KeyToggle.Position = UDim2.new(0.55, 0, 0.1, 0)
+    KeyToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    KeyToggle.Text = keyName
+    KeyToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    KeyToggle.TextSize = 16
+    KeyToggle.Font = Enum.Font.SourceSans
+    KeyToggle.Parent = KeyFrame
+    local KeyToggleCorner = Instance.new("UICorner")
+    KeyToggleCorner.CornerRadius = UDim.new(0, 6)
+    KeyToggleCorner.Parent = KeyToggle
+    KeyToggle.MouseButton1Click:Connect(onClick)
+    parent.CanvasSize = UDim2.new(0, 0, 0, parent.UIListLayout.AbsoluteContentSize.Y + 10)
+end
+-- Combat Page Setup
+CreateHeader(CombatPage, "Aimbot Settings")
 CreateToggle(CombatPage, "Aimbot", ToggleAimbot)
-CreateToggle(CombatPage, "RivalsAimBot", ToggleRivalsAimBot)
+CreateToggle(CombatPage, "Aim Helper", ToggleAimHelper)
 CreateToggle(CombatPage, "Wall Check", ToggleWallCheck)
 CreateToggle(CombatPage, "Team Check", ToggleTeamCheck)
-CreateToggle(CombatPage, "Show FOV", ToggleShowFOV)
-CreateToggle(CombatPage, "TriggerBot", ToggleTriggerBot)
-CreateToggle(CombatPage, "EnemyTP-Kill", ToggleEnemyTPKill)
-CreateSlider(CombatPage, "FOVSize", 50, 500, Settings.FOVSize, function(value)
+CreateKeyFrame(CombatPage, "Aimbot Key:", aimKey, aimKeyName, function()
+    aimKey = (aimKey == Enum.UserInputType.MouseButton1) and Enum.UserInputType.MouseButton2 or Enum.UserInputType.MouseButton1
+    aimKeyName = getInputName(aimKey)
+end)
+CreateSlider(CombatPage, "FOV Size", 50, 500, Settings.FOVSize, function(value)
     Settings.FOVSize = value
-    RivalsAimbot.FOV = value
+    AimbotSettings.FOV = value
     FOVCircle.Radius = value
     updateFOVCircle()
 end)
-CreateSlider(CombatPage, "AimbotDistance", 100, 5000, Settings.AimbotDistance, function(value)
+CreateSlider(CombatPage, "Aimbot Distance", 100, 5000, Settings.AimbotDistance, function(value)
     Settings.AimbotDistance = value
-    RivalsAimbot.Range = value
+    AimbotSettings.Range = value
 end)
+CreateToggle(CombatPage, "Show FOV", ToggleShowFOV)
+CreateHeader(CombatPage, "Combat Tools")
+CreateToggle(CombatPage, "Trigger Bot", ToggleTriggerBot)
+CreateToggle(CombatPage, "Enemy TP-Kill", ToggleEnemyTPKill)
+-- Movement Page Setup
+CreateHeader(MovementPage, "Basic Movement")
 CreateToggle(MovementPage, "NoClip", ToggleNoClip)
 CreateToggle(MovementPage, "Infinite Jump", ToggleInfJump)
 CreateToggle(MovementPage, "Speed Hack", ToggleSpeedHack)
-CreateToggle(MovementPage, "Fly", ToggleFly)
-CreateToggle(MovementPage, "Jump Boost", ToggleJumpBoost)
-CreateToggle(MovementPage, "Super Jump", ToggleSuperJump)
-CreateToggle(MovementPage, "Bunny Hop", ToggleBHOP)
-CreateSlider(MovementPage, "SpeedScale", 16, 100, Settings.SpeedScale, function(value)
+CreateSlider(MovementPage, "Speed Scale", 16, 100, Settings.SpeedScale, function(value)
     Settings.SpeedScale = value
     if Toggles.SpeedHack and LocalPlayer.Character then
         local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
         if humanoid then humanoid.WalkSpeed = value end
     end
 end)
-CreateSlider(MovementPage, "FlySpeed", 10, 200, Settings.FlySpeed, function(value)
+CreateHeader(MovementPage, "Fly")
+CreateToggle(MovementPage, "Fly", ToggleFly)
+CreateSlider(MovementPage, "Fly Speed", 10, 200, Settings.FlySpeed, function(value)
     Settings.FlySpeed = value
 end)
-CreateSlider(MovementPage, "JumpBoostScale", 50, 150, Settings.JumpBoostScale, function(value)
+CreateHeader(MovementPage, "Jump Mods")
+CreateToggle(MovementPage, "Jump Boost", ToggleJumpBoost)
+CreateSlider(MovementPage, "Jump Boost Scale", 50, 150, Settings.JumpBoostScale, function(value)
     Settings.JumpBoostScale = value
     if Toggles.JumpBoost and LocalPlayer.Character then
         local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
         if humanoid then humanoid.JumpPower = value end
     end
 end)
-CreateSlider(MovementPage, "SuperJumpScale", 50, 300, Settings.SuperJumpScale, function(value)
+CreateToggle(MovementPage, "Super Jump", ToggleSuperJump)
+CreateSlider(MovementPage, "Super Jump Scale", 50, 300, Settings.SuperJumpScale, function(value)
     Settings.SuperJumpScale = value
 end)
-CreateSlider(MovementPage, "BHOPSpeed", 10, 50, Settings.BHOPSpeed, function(value)
+CreateToggle(MovementPage, "Bunny Hop", ToggleBHOP)
+CreateSlider(MovementPage, "Bunny Hop Speed", 10, 50, Settings.BHOPSpeed, function(value)
     Settings.BHOPSpeed = value
 end)
+-- Visuals Page Setup
+CreateHeader(VisualsPage, "ESP Features")
 CreateToggle(VisualsPage, "Box ESP", ToggleBoxESP)
 CreateToggle(VisualsPage, "Tracers", ToggleTracers)
 CreateToggle(VisualsPage, "Health ESP", ToggleHealthESP)
 CreateToggle(VisualsPage, "Names ESP", ToggleNamesESP)
 CreateToggle(VisualsPage, "Distance ESP", ToggleDistanceESP)
-CreateSlider(VisualsPage, "ESPDistance", 100, 5000, Settings.ESPDistance, function(value)
+CreateSlider(VisualsPage, "ESP Distance", 100, 5000, Settings.ESPDistance, function(value)
     Settings.ESPDistance = value
 end)
--- GameFOV MOVED TO VISUALS PAGE
-CreateFOVSlider(VisualsPage, "GameFOV", Settings.GameFOV, function(value)
+CreateHeader(VisualsPage, "Camera")
+CreateFOVSlider(VisualsPage, "Game FOV", Settings.GameFOV, function(value)
     Settings.GameFOV = value
     Camera.FieldOfView = value
 end)
+-- Misc Page Setup
+CreateHeader(MiscPage, "Player Mods")
 CreateToggle(MiscPage, "Invisible", ToggleInvisible)
-CreateToggle(MiscPage, "SpinBot", ToggleSpinBot)
 CreateToggle(MiscPage, "God Mode", ToggleGodMode)
+CreateHeader(MiscPage, "Automation")
 CreateToggle(MiscPage, "Anti-AFK", ToggleAntiAFK)
 CreateToggle(MiscPage, "Jerk", ToggleJerk)
--- Teleport Behind MOVED TO MISC PAGE
-CreateToggle(MiscPage, "Teleport Behind", ToggleTeleportBehind)
-CreateSlider(MiscPage, "SpinBotSpeed", 100, 2000, Settings.SpinBotSpeed, function(value)
+CreateHeader(MiscPage, "Fun Mods")
+CreateToggle(MiscPage, "SpinBot", ToggleSpinBot)
+CreateSlider(MiscPage, "SpinBot Speed", 100, 2000, Settings.SpinBotSpeed, function(value)
     Settings.SpinBotSpeed = value
+end)
+CreateToggle(MiscPage, "Teleport Behind", ToggleTeleportBehind)
+CreateKeyFrame(MiscPage, "Teleport Key:", tpKey, tpKeyName, function()
+    local listening = true
+    local tempText = "Press a key..."
+    -- Assuming the KeyToggle is accessible, but since it's created dynamically, adjust if needed
+    local inputConnection
+    inputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if listening and not gameProcessed then
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                tpKey = input.KeyCode
+                tpKeyName = getInputName(input.KeyCode)
+                listening = false
+                inputConnection:Disconnect()
+            end
+        end
+    end)
 end)
 -- Apply loaded toggles
 local Callbacks = {
     NoClip = ToggleNoClip,
     InfJump = ToggleInfJump,
     Aimbot = ToggleAimbot,
+    AimHelper = ToggleAimHelper,
     TeamCheck = ToggleTeamCheck,
     BoxESP = ToggleBoxESP,
     Tracers = ToggleTracers,
@@ -1781,7 +1755,7 @@ local Callbacks = {
     BHOP = ToggleBHOP,
     TriggerBot = ToggleTriggerBot,
     TeleportBehind = ToggleTeleportBehind,
-    RivalsAimBot = ToggleRivalsAimBot
+    WallCheck = ToggleWallCheck
 }
 for key, value in pairs(Toggles) do
     if value and Callbacks[key] then
